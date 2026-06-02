@@ -72,6 +72,10 @@ add_subdirectory(Bluetooth)
 # DDS Communication (optional, requires CycloneDDS)
 # ----------------------------------------------------------------------------
 if(QGC_ENABLE_DDS)
+    # Find CycloneDDS
+    list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+    find_package(CycloneDDS REQUIRED)
+
     target_sources(${CMAKE_PROJECT_NAME}
         PRIVATE
             DDSLink/DDSConfiguration.cc
@@ -84,15 +88,38 @@ if(QGC_ENABLE_DDS)
             ${CMAKE_SOURCE_DIR}/src/DDS/DDSTransformRegistry.h
             ${CMAKE_SOURCE_DIR}/src/DDS/DDSDataInjector.cc
             ${CMAKE_SOURCE_DIR}/src/DDS/DDSDataInjector.h
+            # CycloneDDS-generated PX4 message types
+            ${CMAKE_SOURCE_DIR}/src/DDS/generated/VehicleAttitude.c
+            ${CMAKE_SOURCE_DIR}/src/DDS/generated/VehicleAttitude.h
+            ${CMAKE_SOURCE_DIR}/src/DDS/generated/VehicleGlobalPosition.c
+            ${CMAKE_SOURCE_DIR}/src/DDS/generated/VehicleGlobalPosition.h
+            ${CMAKE_SOURCE_DIR}/src/DDS/generated/VehicleLocalPosition.c
+            ${CMAKE_SOURCE_DIR}/src/DDS/generated/VehicleLocalPosition.h
+            ${CMAKE_SOURCE_DIR}/src/DDS/generated/BatteryStatus.c
+            ${CMAKE_SOURCE_DIR}/src/DDS/generated/BatteryStatus.h
+            ${CMAKE_SOURCE_DIR}/src/DDS/generated/VehicleStatus.c
+            ${CMAKE_SOURCE_DIR}/src/DDS/generated/VehicleStatus.h
     )
 
     target_include_directories(${CMAKE_PROJECT_NAME}
         PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/DDSLink
             ${CMAKE_SOURCE_DIR}/src/DDS
+            ${CMAKE_SOURCE_DIR}/src/DDS/generated
     )
 
     target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE QGC_ENABLE_DDS)
+    target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE CycloneDDS::ddsc)
+
+    # Suppress warnings in generated C code
+    set_source_files_properties(
+        ${CMAKE_SOURCE_DIR}/src/DDS/generated/VehicleAttitude.c
+        ${CMAKE_SOURCE_DIR}/src/DDS/generated/VehicleGlobalPosition.c
+        ${CMAKE_SOURCE_DIR}/src/DDS/generated/VehicleLocalPosition.c
+        ${CMAKE_SOURCE_DIR}/src/DDS/generated/BatteryStatus.c
+        ${CMAKE_SOURCE_DIR}/src/DDS/generated/VehicleStatus.c
+        PROPERTIES COMPILE_FLAGS "-w"
+    )
 
     qt_add_resources(${CMAKE_PROJECT_NAME} dds_mappings
         PREFIX "/dds_mappings"

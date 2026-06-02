@@ -3,13 +3,11 @@
 #include "DDSDataInjector.h"
 #include "DDSMappingEngine.h"
 #include "DDSTransformRegistry.h"
+#include "Vehicle.h"
+#include "Fact.h"
+#include "FactGroup.h"
 
 #include <QtCore/QDebug>
-
-// NOTE: When integrating into QGC, replace these stubs with real includes:
-// #include "Vehicle.h"
-// #include "Fact.h"
-// #include "FactGroup.h"
 
 DDSDataInjector::DDSDataInjector(DDSMappingEngine *engine,
                                  DDSTransformRegistry *transforms,
@@ -36,7 +34,6 @@ void DDSDataInjector::onDDSMessage(const QString &topicName,
     Q_UNUSED(timestampUs);
     _messagesProcessed++;
 
-    // Look up topic mapping
     const DDSTopicMapping *mapping = _mappingEngine->topicMapping(topicName);
     if (!mapping) {
         _unmappedSkipped++;
@@ -44,16 +41,12 @@ void DDSDataInjector::onDDSMessage(const QString &topicName,
         return;
     }
 
-    // Process each field mapping
     for (const DDSFieldMapping &fieldMapping : mapping->fields) {
         QVariant value;
 
         if (!fieldMapping.transform.isEmpty()) {
-            // Use registered transform function
             DDSTransformFunc func = _transformRegistry->transform(fieldMapping.transform);
             if (func) {
-                // For transforms that need the full field set (e.g. quaternion),
-                // pass all fields. For simple transforms, inject _value key.
                 QHash<QString, QVariant> transformInput = fields;
                 if (fields.contains(fieldMapping.ddsField)) {
                     transformInput.insert(QStringLiteral("_value"),
@@ -66,14 +59,12 @@ void DDSDataInjector::onDDSMessage(const QString &topicName,
                 continue;
             }
         } else {
-            // Direct field mapping (no transform)
             if (!fields.contains(fieldMapping.ddsField)) {
                 continue;
             }
             value = fields.value(fieldMapping.ddsField);
         }
 
-        // Apply scale and offset: result = value * scale + offset
         if (fieldMapping.scale != 1.0 || fieldMapping.offset != 0.0) {
             bool ok = false;
             double numVal = value.toDouble(&ok);
@@ -83,51 +74,76 @@ void DDSDataInjector::onDDSMessage(const QString &topicName,
             }
         }
 
-        // Inject into Fact system
         const QString &factGroup = fieldMapping.factGroup;
         const QString &factName = fieldMapping.factName;
         _injectField(factGroup, factName, value);
     }
 }
 
+FactGroup *DDSDataInjector::_resolveFactGroup(const QString &path) const
+{
+    if (!_vehicle) {
+        return nullptr;
+    }
+
+    if (path.isEmpty() || path == QLatin1String("vehicle")) {
+        return _vehicle->vehicleFactGroup();
+    }
+    if (path == QLatin1String("gps")) {
+        return _vehicle->gpsFactGroup();
+    }
+    if (path == QLatin1String("gps2")) {
+        return _vehicle->gps2FactGroup();
+    }
+    if (path == QLatin1String("wind")) {
+        return _vehicle->windFactGroup();
+    }
+    if (path == QLatin1String("vibration")) {
+        return _vehicle->vibrationFactGroup();
+    }
+    if (path == QLatin1String("localPosition")) {
+        return _vehicle->localPositionFactGroup();
+    }
+    if (path == QLatin1String("estimatorStatus")) {
+        return _vehicle->estimatorStatusFactGroup();
+    }
+    if (path == QLatin1String("terrain")) {
+        return _vehicle->terrainFactGroup();
+    }
+    if (path == QLatin1String("temperature")) {
+        return _vehicle->temperatureFactGroup();
+    }
+    if (path == QLatin1String("clock")) {
+        return _vehicle->clockFactGroup();
+    }
+    if (path == QLatin1String("setpoint")) {
+        return _vehicle->setpointFactGroup();
+    }
+    if (path == QLatin1String("distanceSensors")) {
+        return _vehicle->distanceSensorFactGroup();
+    }
+
+    qDebug() << "[DDSDataInjector] Unknown fact group:" << path;
+    return nullptr;
+}
+
 void DDSDataInjector::_injectField(const QString &factGroupPath,
                                     const QString &factName,
                                     const QVariant &value)
 {
-    // TODO(P1-integration): When integrating into QGC, implement as:
-    //
-    //   if (!_vehicle) return;
-    //
-    //   // Resolve FactGroup from path
-    //   // "vehicle" → _vehicle (which is VehicleFactGroup itself)
-    //   // "gps"     → _vehicle->gpsFactGroup()
-    //   // "battery" → _vehicle->battery1FactGroup()
-    //   // etc.
-    //
-    //   FactGroup *group = nullptr;
-    //   if (factGroupPath == "vehicle") {
-    //       group = _vehicle;
-    //   } else {
-    //       group = _vehicle->getFactGroup(factGroupPath);
-    //   }
-    //
-    //   if (!group) {
-    //       qDebug() << "[DDSDataInjector] FactGroup not found:" << factGroupPath;
-    //       return;
-    //   }
-    //
-    //   Fact *fact = group->getFact(factName);
-    //   if (!fact) {
-    //       qDebug() << "[DDSDataInjector] Fact not found:" << factGroupPath << "/" << factName;
-    //       return;
-    //   }
-    //
-    //   fact->setRawValue(value);
+    FactGroup *group = _resolveFactGroup(factGroupPath);
+    if (group) {
+        Fact *fact = group->getFact(factName);
+        if (fact) {
+            fact->setRawValue(value);
+            _factsUpdated++;
+            emit factUpdated(factGroupPath, factName, value);
+            return;
+        }
+    }
 
     _factsUpdated++;
     emit factUpdated(factGroupPath, factName, value);
-
-    qDebug() << "[DDSDataInjector]" << factGroupPath << "/" << factName << "=" << value;
 }
 
 #endif // QGC_ENABLE_DDS

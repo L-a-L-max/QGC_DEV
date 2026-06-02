@@ -8,6 +8,8 @@
 #include "DDSTransformRegistry.h"
 #include "DDSDataInjector.h"
 
+#include <dds/dds.h>
+
 #include <QtCore/QHash>
 #include <QtCore/QTimer>
 #include <QtQmlIntegration/QtQmlIntegration>
@@ -43,16 +45,29 @@ private slots:
     void _onPollTimer();
 
 private:
-    // LinkInterface overrides
     bool _connect() override;
     void _writeBytes(const QByteArray &bytes) override;
 
-    // CycloneDDS operations (stubs until P1 real implementation)
-    int  _createParticipant(int domainId);
-    void _destroyParticipant(int participant);
-    void _subscribeToTopics(int participant, const QStringList &topicNames);
-    QStringList _runDiscovery(int participant);
-    QHash<QString, QVariant> _readSample(int reader);
+    dds_entity_t _createParticipant(int domainId);
+    void         _destroyParticipant(dds_entity_t participant);
+    void         _subscribeToTopics(dds_entity_t participant, const QStringList &topicNames);
+    QStringList  _runDiscovery(dds_entity_t participant);
+
+    dds_entity_t _createTypedReader(dds_entity_t participant,
+                                    const QString &topicName,
+                                    const dds_topic_descriptor_t *desc);
+    QHash<QString, QVariant> _readSample(dds_entity_t reader, const QString &topicName);
+
+    static QHash<QString, QVariant> _parseVehicleAttitude(const void *sample);
+    static QHash<QString, QVariant> _parseVehicleGlobalPosition(const void *sample);
+    static QHash<QString, QVariant> _parseVehicleLocalPosition(const void *sample);
+    static QHash<QString, QVariant> _parseBatteryStatus(const void *sample);
+    static QHash<QString, QVariant> _parseVehicleStatus(const void *sample);
+
+    const dds_topic_descriptor_t *_descriptorForTopic(const QString &topicName) const;
+
+    using SampleParser = QHash<QString, QVariant> (*)(const void *);
+    SampleParser _parserForTopic(const QString &topicName) const;
 
     DDSConfiguration *_ddsConfig() const;
 
@@ -61,10 +76,15 @@ private:
     DDSDataInjector      _dataInjector;
 
     QTimer               _pollTimer;
-    int                  _participant = -1;
+    dds_entity_t         _participant = DDS_ENTITY_NIL;
     bool                 _connected   = false;
 
-    QHash<QString, int>  _readers;
+    struct ReaderInfo {
+        dds_entity_t reader = DDS_ENTITY_NIL;
+        SampleParser parser = nullptr;
+    };
+
+    QHash<QString, ReaderInfo> _readers;
 };
 
 #endif // QGC_ENABLE_DDS

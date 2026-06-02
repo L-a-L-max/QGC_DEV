@@ -1,0 +1,43 @@
+// PX4 VehicleStatus message — IDL for CycloneDDS (simplified)
+// Source: PX4-Autopilot/msg/versioned/VehicleStatus.msg
+
+module px4_msgs {
+module msg {
+module dds_ {
+
+struct VehicleStatus_ {
+    unsigned long long timestamp;
+    octet armed_time;
+    octet takeoff_time;
+    octet arming_state;
+    octet latest_arming_reason;
+    octet latest_disarming_reason;
+    unsigned long long nav_state_timestamp;
+    octet nav_state;
+    octet nav_state_user_intention;
+    octet failure_detector_status;
+    octet hil_state;
+    octet vehicle_type;
+    boolean failsafe;
+    octet failsafe_and_target_state;
+    boolean is_vtol;
+    boolean is_vtol_tailsitter;
+    boolean in_transition_mode;
+    boolean in_transition_to_fw;
+    boolean gcs_connection_lost;
+    octet gcs_connection_lost_counter;
+    boolean high_latency_data_link_lost;
+    boolean power_input_valid;
+    boolean usb_connected;
+    boolean open_drone_id_system_present;
+    boolean open_drone_id_system_healthy;
+    boolean parachute_system_present;
+    boolean parachute_system_healthy;
+    boolean avoidance_system_required;
+    boolean avoidance_system_valid;
+    octet rc_calibrated;
+};
+
+}; // dds_
+}; // msg
+}; // px4_msgs

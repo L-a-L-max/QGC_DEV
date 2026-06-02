@@ -9,6 +9,7 @@
 
 class DDSMappingEngine;
 class DDSTransformRegistry;
+class FactGroup;
 class Vehicle;
 
 /// @file DDSDataInjector.h
@@ -66,6 +67,8 @@ private:
     void _injectField(const QString &factGroupPath,
                       const QString &factName,
                       const QVariant &value);
+
+    FactGroup *_resolveFactGroup(const QString &path) const;
 
     DDSMappingEngine     *_mappingEngine    = nullptr;
     DDSTransformRegistry *_transformRegistry = nullptr;
