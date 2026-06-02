@@ -9,6 +9,7 @@ QGC_LOGGING_CATEGORY(DDSLinkLog, "Comms.DDSLink")
 
 DDSLink::DDSLink(SharedLinkConfigurationPtr &config, QObject *parent)
     : LinkInterface(config, parent)
+    , _dataInjector(&_mappingEngine, &_transformRegistry, this)
 {
     qCDebug(DDSLinkLog) << "DDSLink created";
 
