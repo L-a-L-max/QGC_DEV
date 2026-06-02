@@ -111,6 +111,7 @@ qt_add_qml_module(AppSettingsModule
         SettingsPage.qml
         TcpSettings.qml
         UdpSettings.qml
+        DDSSettings.qml
     NO_PLUGIN
 )
 

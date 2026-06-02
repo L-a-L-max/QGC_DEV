@@ -10,6 +10,9 @@
 #ifdef QT_DEBUG
 #include "MockLink.h"
 #endif
+#ifdef QGC_ENABLE_DDS
+#include "DDSConfiguration.h"
+#endif
 
 QGC_LOGGING_CATEGORY(LinkConfigurationLog, "Comms.LinkConfiguration")
 
@@ -76,6 +79,11 @@ LinkConfiguration *LinkConfiguration::createSettings(int type, const QString &na
         config = new MockConfiguration(name);
         break;
 #endif
+#ifdef QGC_ENABLE_DDS
+    case TypeDDS:
+        config = new DDSConfiguration(name);
+        break;
+#endif
     case TypeLast:
     default:
         break;
@@ -109,6 +117,11 @@ LinkConfiguration *LinkConfiguration::duplicateSettings(const LinkConfiguration 
 #ifdef QT_DEBUG
     case TypeMock:
         dupe = new MockConfiguration(qobject_cast<const MockConfiguration*>(source));
+        break;
+#endif
+#ifdef QGC_ENABLE_DDS
+    case TypeDDS:
+        dupe = new DDSConfiguration(qobject_cast<const DDSConfiguration*>(source));
         break;
 #endif
     case TypeLast:

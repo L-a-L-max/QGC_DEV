@@ -26,6 +26,9 @@
 #ifdef QT_DEBUG
 #include "MockLink.h"
 #endif
+#ifdef QGC_ENABLE_DDS
+#include "DDSLink.h"
+#endif
 
 #include <QtCore/QApplicationStatic>
 #include <QtCore/QTimer>
@@ -115,6 +118,11 @@ bool LinkManager::createConnectedLink(SharedLinkConfigurationPtr &config)
 #ifdef QT_DEBUG
     case LinkConfiguration::TypeMock:
         link = std::make_shared<MockLink>(config);
+        break;
+#endif
+#ifdef QGC_ENABLE_DDS
+    case LinkConfiguration::TypeDDS:
+        link = std::make_shared<DDSLink>(config);
         break;
 #endif
     case LinkConfiguration::TypeLast:
@@ -485,6 +493,9 @@ QStringList LinkManager::linkTypeStrings() const
     list += tr("Mock Link");
 #endif
     list += tr("Log Replay");
+#ifdef QGC_ENABLE_DDS
+    list += tr("DDS");
+#endif
 
     if (list.size() != static_cast<int>(LinkConfiguration::TypeLast)) {
         qCWarning(LinkManagerLog) << "Internal error";

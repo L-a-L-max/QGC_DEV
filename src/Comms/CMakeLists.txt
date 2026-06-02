@@ -68,6 +68,41 @@ endif()
 # ----------------------------------------------------------------------------
 add_subdirectory(Bluetooth)
 
+# ----------------------------------------------------------------------------
+# DDS Communication (optional, requires CycloneDDS)
+# ----------------------------------------------------------------------------
+if(QGC_ENABLE_DDS)
+    target_sources(${CMAKE_PROJECT_NAME}
+        PRIVATE
+            DDSLink/DDSConfiguration.cc
+            DDSLink/DDSConfiguration.h
+            DDSLink/DDSLink.cc
+            DDSLink/DDSLink.h
+            ${CMAKE_SOURCE_DIR}/src/DDS/DDSMappingEngine.cc
+            ${CMAKE_SOURCE_DIR}/src/DDS/DDSMappingEngine.h
+            ${CMAKE_SOURCE_DIR}/src/DDS/DDSTransformRegistry.cc
+            ${CMAKE_SOURCE_DIR}/src/DDS/DDSTransformRegistry.h
+            ${CMAKE_SOURCE_DIR}/src/DDS/DDSDataInjector.cc
+            ${CMAKE_SOURCE_DIR}/src/DDS/DDSDataInjector.h
+    )
+
+    target_include_directories(${CMAKE_PROJECT_NAME}
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/DDSLink
+            ${CMAKE_SOURCE_DIR}/src/DDS
+    )
+
+    target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE QGC_ENABLE_DDS)
+
+    qt_add_resources(${CMAKE_PROJECT_NAME} dds_mappings
+        PREFIX "/dds_mappings"
+        BASE "${CMAKE_SOURCE_DIR}/resources/dds_mappings"
+        FILES
+            "${CMAKE_SOURCE_DIR}/resources/dds_mappings/_default.json"
+            "${CMAKE_SOURCE_DIR}/resources/dds_mappings/_vendor_template.json"
+    )
+endif()
+
 # ============================================================================
 # Communication Link Subdirectories
 # ============================================================================

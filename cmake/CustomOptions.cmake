@@ -79,6 +79,7 @@ option(QGC_ENABLE_LZ4 "Enable LZ4 decompression support" OFF)
 # ============================================================================
 
 option(QGC_NO_SERIAL_LINK "Disable serial port communication" OFF)
+option(QGC_ENABLE_DDS "Enable native DDS communication support (requires CycloneDDS)" OFF)
 
 # ============================================================================
 # Video Streaming Options

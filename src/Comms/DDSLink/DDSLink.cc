@@ -1,204 +1,164 @@
 #ifdef QGC_ENABLE_DDS
 
 #include "DDSLink.h"
-#include "DDSDataInjector.h"
-#include "DDSMappingEngine.h"
-#include "DDSTransformRegistry.h"
+#include "QGCLoggingCategory.h"
 
-#include <QtCore/QDebug>
+#include <QtCore/QDateTime>
 
-// CycloneDDS C API
-// When integrating: #include <dds/dds.h>
-// For now we use stub implementations that compile without the DDS library.
-// Replace the stub bodies with real CycloneDDS calls during P1 integration.
+QGC_LOGGING_CATEGORY(DDSLinkLog, "Comms.DDSLink")
 
-static constexpr int kPollIntervalMs = 10;  // 100 Hz polling → <10ms latency
-
-DDSLink::DDSLink(DDSConfiguration *config, QObject *parent)
-    : LinkConfiguration(config->name(), parent)
-    , _config(config)
+DDSLink::DDSLink(SharedLinkConfigurationPtr &config, QObject *parent)
+    : LinkInterface(config, parent)
 {
-    _mappingEngine = new DDSMappingEngine(this);
-    _transformRegistry = new DDSTransformRegistry(this);
-    _dataInjector = new DDSDataInjector(_mappingEngine, _transformRegistry, this);
+    qCDebug(DDSLinkLog) << "DDSLink created";
 
-    _pollTimer.setInterval(kPollIntervalMs);
-    connect(&_pollTimer, &QTimer::timeout, this, &DDSLink::_onPollTimer);
-
-    // Wire DDS messages to the data injector
-    connect(this, &DDSLink::ddsMessageReceived,
-            _dataInjector, &DDSDataInjector::onDDSMessage);
+    _pollTimer.setInterval(10);
+    (void) connect(&_pollTimer, &QTimer::timeout, this, &DDSLink::_onPollTimer);
+    (void) connect(this, &DDSLink::ddsMessageReceived,
+                   &_dataInjector, &DDSDataInjector::onDDSMessage);
 }
 
 DDSLink::~DDSLink()
 {
-    disconnectLink();
+    disconnect();
 }
 
-bool DDSLink::connectLink()
+DDSConfiguration *DDSLink::_ddsConfig() const
 {
-    QMutexLocker locker(&_mutex);
+    return qobject_cast<DDSConfiguration *>(_config.get());
+}
+
+bool DDSLink::_connect()
+{
     if (_connected) {
         return true;
     }
 
-    // Load vendor mapping table
-    const QString mappingFile = _config->vendorMapping().isEmpty()
+    const DDSConfiguration *config = _ddsConfig();
+    if (!config) {
+        emit communicationError(tr("DDS Link"), tr("Invalid DDS configuration"));
+        return false;
+    }
+
+    const QString mappingName = config->vendorMapping().isEmpty()
                                     ? QStringLiteral("_default")
-                                    : _config->vendorMapping();
-    if (!_mappingEngine->loadMapping(mappingFile)) {
-        qWarning() << "[DDSLink] Failed to load mapping:" << mappingFile;
-        return false;
-    }
-    qInfo() << "[DDSLink] Loaded mapping:" << mappingFile
-            << "with" << _mappingEngine->topicCount() << "topics";
-
-    // Create DDS participant
-    if (!_createParticipant()) {
-        qWarning() << "[DDSLink] Failed to create DDS participant on domain"
-                    << _config->domainId();
+                                    : config->vendorMapping();
+    if (!_mappingEngine.loadMapping(mappingName)) {
+        qCWarning(DDSLinkLog) << "Failed to load mapping:" << mappingName;
+        emit communicationError(tr("DDS Link"),
+                                tr("Failed to load mapping table: %1").arg(mappingName));
         return false;
     }
 
-    // Discover or use configured topics
-    QStringList topics;
-    if (_config->autoDiscover()) {
-        topics = _runDiscovery();
-        if (!topics.isEmpty()) {
-            emit topicsDiscovered(topics);
+    qCInfo(DDSLinkLog) << "Loaded mapping:" << mappingName
+                       << "topics:" << _mappingEngine.topicCount()
+                       << "fields:" << _mappingEngine.fieldCount();
+
+    _participant = _createParticipant(config->domainId());
+    if (_participant < 0) {
+        emit communicationError(tr("DDS Link"), tr("Failed to create DDS participant"));
+        return false;
+    }
+
+    if (config->autoDiscover()) {
+        const QStringList discovered = _runDiscovery(_participant);
+        if (!discovered.isEmpty()) {
+            qCInfo(DDSLinkLog) << "Discovered topics:" << discovered;
+            emit topicsDiscovered();
         }
     }
 
-    // If discovery didn't find anything, subscribe to all topics in mapping table
-    if (topics.isEmpty()) {
-        topics = _mappingEngine->allTopicNames();
-    }
-
-    // Apply namespace prefix
-    QStringList prefixedTopics;
-    const QString &ns = _config->namespacePrefix();
-    for (const QString &t : topics) {
-        prefixedTopics.append(ns + t);
-    }
-
-    _subscribeToTopics(prefixedTopics);
-
-    _connected = true;
+    _subscribeToTopics(_participant, _mappingEngine.allTopicNames());
     _pollTimer.start();
 
-    qInfo() << "[DDSLink] Connected. Domain:" << _config->domainId()
-            << "Topics:" << _readers.size()
-            << "Namespace:" << (ns.isEmpty() ? "(none)" : ns);
-
-    emit connectedChanged(true);
+    _connected = true;
+    qCInfo(DDSLinkLog) << "DDS link connected on domain" << config->domainId();
+    emit connected();
     return true;
 }
 
-void DDSLink::disconnectLink()
+void DDSLink::disconnect()
 {
-    QMutexLocker locker(&_mutex);
     if (!_connected) {
         return;
     }
 
     _pollTimer.stop();
-    _destroyParticipant();
-    _readers.clear();
-    _connected = false;
 
-    qInfo() << "[DDSLink] Disconnected";
-    emit connectedChanged(false);
+    _readers.clear();
+
+    if (_participant >= 0) {
+        _destroyParticipant(_participant);
+        _participant = -1;
+    }
+
+    _connected = false;
+    emit disconnected();
+    qCInfo(DDSLinkLog) << "DDS link disconnected";
 }
 
-void DDSLink::setVehicle(Vehicle *vehicle)
+void DDSLink::_writeBytes(const QByteArray &bytes)
 {
-    if (_dataInjector) {
-        _dataInjector->setVehicle(vehicle);
-    }
+    Q_UNUSED(bytes);
+    // TODO(P3): Implement DDS publish for command/parameter requests
 }
 
 void DDSLink::_onPollTimer()
 {
-    QMutexLocker locker(&_mutex);
     if (!_connected) {
         return;
     }
 
-    for (auto it = _readers.constBegin(); it != _readers.constEnd(); ++it) {
-        const QString &topicName = it.key();
-        QHash<QString, QVariant> fields = _readSample(topicName);
-        if (!fields.isEmpty()) {
-            const quint64 tsUs = static_cast<quint64>(
-                QDateTime::currentMSecsSinceEpoch() * 1000);
-            emit ddsMessageReceived(topicName, fields, tsUs);
+    const quint64 now = static_cast<quint64>(QDateTime::currentMSecsSinceEpoch()) * 1000;
+
+    for (auto it = _readers.cbegin(); it != _readers.cend(); ++it) {
+        const QHash<QString, QVariant> sample = _readSample(it.value());
+        if (!sample.isEmpty()) {
+            emit ddsMessageReceived(it.key(), sample, now);
         }
     }
 }
 
 // ---------------------------------------------------------------------------
-// CycloneDDS integration stubs
-// Replace these with real dds_create_participant / dds_create_reader / dds_take
-// calls when linking against libddsc.
+// CycloneDDS stub implementations — replaced with real API in P1
 // ---------------------------------------------------------------------------
 
-bool DDSLink::_createParticipant()
+int DDSLink::_createParticipant(int domainId)
 {
-    // TODO(P1): Replace with:
-    //   _participantHandle = dds_create_participant(_config->domainId(), NULL, NULL);
-    //   return _participantHandle >= 0;
-    qInfo() << "[DDSLink] STUB: _createParticipant domain=" << _config->domainId();
-    _participantHandle = 1;  // fake handle
-    return true;
+    // TODO(P1): dds_create_participant(domainId, nullptr, nullptr)
+    qCDebug(DDSLinkLog) << "Stub: create participant on domain" << domainId;
+    return 1;
 }
 
-void DDSLink::_destroyParticipant()
+void DDSLink::_destroyParticipant(int participant)
 {
-    // TODO(P1): Replace with:
-    //   if (_participantHandle >= 0) dds_delete(_participantHandle);
-    _participantHandle = -1;
+    // TODO(P1): dds_delete(participant)
+    qCDebug(DDSLinkLog) << "Stub: destroy participant" << participant;
 }
 
-void DDSLink::_subscribeToTopics(const QStringList &topicNames)
+void DDSLink::_subscribeToTopics(int participant, const QStringList &topicNames)
 {
-    // TODO(P1): For each topic, use DDS Dynamic Data API to create a reader
-    //   without compile-time IDL types. This allows subscribing to any PX4 topic.
-    //
-    //   Pseudocode:
-    //   for (const auto &name : topicNames) {
-    //       dds_entity_t topic = dds_create_topic_generic(_participantHandle, ...);
-    //       dds_entity_t reader = dds_create_reader(_participantHandle, topic, ...);
-    //       _readers.insert(name, reader);
-    //   }
-    for (const QString &name : topicNames) {
-        _readers.insert(name, 0);  // fake reader handle
+    // TODO(P1): For each topic, create reader via dds_create_reader()
+    Q_UNUSED(participant);
+    int readerId = 100;
+    for (const QString &topic : topicNames) {
+        _readers.insert(topic, readerId++);
+        qCDebug(DDSLinkLog) << "Stub: subscribed to" << topic << "reader:" << (readerId - 1);
     }
-    qInfo() << "[DDSLink] STUB: Subscribed to" << topicNames.size() << "topics";
 }
 
-QStringList DDSLink::_runDiscovery()
+QStringList DDSLink::_runDiscovery(int participant)
 {
-    // TODO(P1): Use DDS built-in topic discovery to enumerate available topics.
-    //   dds_entity_t reader = dds_create_reader(_participantHandle,
-    //       DDS_BUILTIN_TOPIC_DCPSPUBLICATION, ...);
-    //   Then read DCPSPublication samples to get topic names/types.
-    qInfo() << "[DDSLink] STUB: _runDiscovery";
+    // TODO(P1): Use DDS builtin topics to discover available topics
+    Q_UNUSED(participant);
+    qCDebug(DDSLinkLog) << "Stub: discovery returned empty list";
     return {};
 }
 
-QHash<QString, QVariant> DDSLink::_readSample(const QString &topicName)
+QHash<QString, QVariant> DDSLink::_readSample(int reader)
 {
-    // TODO(P1): Use DDS Dynamic Data API to read one sample from the reader,
-    //   extract fields by name, and return them as QVariant key-value pairs.
-    //
-    //   Pseudocode:
-    //   int reader = _readers.value(topicName);
-    //   void *samples[1];
-    //   dds_sample_info_t infos[1];
-    //   if (dds_take(reader, samples, infos, 1, 1) > 0 && infos[0].valid_data) {
-    //       // extract fields using dynamic type introspection
-    //       return extractedFields;
-    //   }
-    Q_UNUSED(topicName);
+    // TODO(P1): dds_read() / dds_take() to get actual DDS samples
+    Q_UNUSED(reader);
     return {};
 }
 

@@ -79,6 +79,9 @@ public:
         TypeMock,       ///< Mock Link for Unitesting
 #endif
         TypeLogReplay,
+#ifdef QGC_ENABLE_DDS
+        TypeDDS,        ///< DDS Link (native DDS communication)
+#endif
         TypeLast        // Last type value (type >= TypeLast == invalid)
     };
     Q_ENUM(LinkType)
