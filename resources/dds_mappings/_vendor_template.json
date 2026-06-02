@@ -1,0 +1,33 @@
+{
+  "vendor": "your_vendor_name",
+  "version": "1.0.0",
+  "description": "Vendor-specific DDS mapping overlay. Topics defined here override the default mapping.",
+  "base": "_default",
+  "namespace_prefix": "",
+  "topics": [
+    {
+      "dds_topic": "/your_vendor/out/attitude",
+      "dds_type": "your_vendor_msgs::msg::Attitude",
+      "fact_group": "vehicle",
+      "description": "Example: vendor uses different topic name for attitude",
+      "fields": [
+        {
+          "dds_field": "quaternion_w",
+          "fact_name": "roll",
+          "transform": "quaternion_to_euler_roll",
+          "description": "Map vendor's quaternion field name to QGC roll"
+        },
+        {
+          "dds_field": "quaternion_w",
+          "fact_name": "pitch",
+          "transform": "quaternion_to_euler_pitch"
+        },
+        {
+          "dds_field": "quaternion_w",
+          "fact_name": "heading",
+          "transform": "quaternion_to_euler_yaw"
+        }
+      ]
+    }
+  ]
+}
