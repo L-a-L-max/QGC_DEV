@@ -1,8 +1,9 @@
 module px4_msgs {
 module msg {
+module dds_ {
 
 @topic
-struct GimbalDeviceAttitudeStatus {
+struct GimbalDeviceAttitudeStatus_ {
     unsigned long long timestamp;
     octet target_system;
     octet target_component;
@@ -18,5 +19,6 @@ struct GimbalDeviceAttitudeStatus {
     boolean received_from_mavlink;
 };
 
+}; // dds_
 }; // msg
 }; // px4_msgs

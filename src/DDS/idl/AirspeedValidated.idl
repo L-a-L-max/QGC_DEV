@@ -1,8 +1,9 @@
 module px4_msgs {
 module msg {
+module dds_ {
 
 @topic
-struct AirspeedValidated {
+struct AirspeedValidated_ {
     unsigned long long timestamp;
     float indicated_airspeed_m_s;
     float calibrated_airspeed_m_s;
@@ -15,5 +16,6 @@ struct AirspeedValidated {
     float pitch_filtered;
 };
 
+}; // dds_
 }; // msg
 }; // px4_msgs

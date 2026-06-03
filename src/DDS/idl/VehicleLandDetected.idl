@@ -1,8 +1,9 @@
 module px4_msgs {
 module msg {
+module dds_ {
 
 @topic
-struct VehicleLandDetected {
+struct VehicleLandDetected_ {
     unsigned long long timestamp;
     boolean freefall;
     boolean ground_contact;
@@ -18,5 +19,6 @@ struct VehicleLandDetected {
     boolean at_rest;
 };
 
+}; // dds_
 }; // msg
 }; // px4_msgs

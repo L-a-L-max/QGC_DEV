@@ -1,8 +1,9 @@
 module px4_msgs {
 module msg {
+module dds_ {
 
 @topic
-struct VehicleStatus {
+struct VehicleStatus_ {
     unsigned long long timestamp;
     unsigned long long armed_time;
     unsigned long long takeoff_time;
@@ -21,5 +22,6 @@ struct VehicleStatus {
     octet vehicle_type;
 };
 
+}; // dds_
 }; // msg
 }; // px4_msgs

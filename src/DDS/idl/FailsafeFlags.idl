@@ -1,8 +1,9 @@
 module px4_msgs {
 module msg {
+module dds_ {
 
 @topic
-struct FailsafeFlags {
+struct FailsafeFlags_ {
     unsigned long long timestamp;
     unsigned long mode_req_angular_velocity;
     unsigned long mode_req_attitude;
@@ -51,5 +52,6 @@ struct FailsafeFlags {
     boolean gnss_lost;
 };
 
+}; // dds_
 }; // msg
 }; // px4_msgs

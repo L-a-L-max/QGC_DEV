@@ -1,8 +1,9 @@
 module px4_msgs {
 module msg {
+module dds_ {
 
 @topic
-struct VehicleLocalPosition {
+struct VehicleLocalPosition_ {
     unsigned long long timestamp;
     unsigned long long timestamp_sample;
     boolean xy_valid;
@@ -58,5 +59,6 @@ struct VehicleLocalPosition {
     float hagl_max_xy;
 };
 
+}; // dds_
 }; // msg
 }; // px4_msgs

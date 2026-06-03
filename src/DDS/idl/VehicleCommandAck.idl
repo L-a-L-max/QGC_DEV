@@ -1,8 +1,9 @@
 module px4_msgs {
 module msg {
+module dds_ {
 
 @topic
-struct VehicleCommandAck {
+struct VehicleCommandAck_ {
     unsigned long long timestamp;
     unsigned long command;
     octet result;
@@ -13,5 +14,6 @@ struct VehicleCommandAck {
     boolean from_external;
 };
 
+}; // dds_
 }; // msg
 }; // px4_msgs

@@ -1,8 +1,9 @@
 module px4_msgs {
 module msg {
+module dds_ {
 
 @topic
-struct SensorCombined {
+struct SensorCombined_ {
     unsigned long long timestamp;
     float gyro_rad[3];
     unsigned long gyro_integral_dt;
@@ -15,5 +16,6 @@ struct SensorCombined {
     octet gyro_calibration_count;
 };
 
+}; // dds_
 }; // msg
 }; // px4_msgs

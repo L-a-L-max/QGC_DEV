@@ -1,12 +1,14 @@
 module px4_msgs {
 module msg {
+module dds_ {
 
 @topic
-struct VtolVehicleStatus {
+struct VtolVehicleStatus_ {
     unsigned long long timestamp;
     octet vehicle_vtol_state;
     boolean fixed_wing_system_failure;
 };
 
+}; // dds_
 }; // msg
 }; // px4_msgs

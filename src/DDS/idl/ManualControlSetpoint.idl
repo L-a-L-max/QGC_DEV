@@ -1,8 +1,9 @@
 module px4_msgs {
 module msg {
+module dds_ {
 
 @topic
-struct ManualControlSetpoint {
+struct ManualControlSetpoint_ {
     unsigned long long timestamp;
     unsigned long long timestamp_sample;
     boolean valid;
@@ -22,5 +23,6 @@ struct ManualControlSetpoint {
     unsigned short buttons;
 };
 
+}; // dds_
 }; // msg
 }; // px4_msgs

@@ -1,8 +1,9 @@
 module px4_msgs {
 module msg {
+module dds_ {
 
 @topic
-struct Wind {
+struct Wind_ {
     unsigned long long timestamp;
     unsigned long long timestamp_sample;
     float windspeed_north;
@@ -15,5 +16,6 @@ struct Wind {
     float beta_innov_var;
 };
 
+}; // dds_
 }; // msg
 }; // px4_msgs

@@ -1,8 +1,9 @@
 module px4_msgs {
 module msg {
+module dds_ {
 
 @topic
-struct SensorGps {
+struct SensorGps_ {
     unsigned long long timestamp;
     unsigned long long timestamp_sample;
     unsigned long device_id;
@@ -45,5 +46,6 @@ struct SensorGps {
     float antenna_offset_z;
 };
 
+}; // dds_
 }; // msg
 }; // px4_msgs

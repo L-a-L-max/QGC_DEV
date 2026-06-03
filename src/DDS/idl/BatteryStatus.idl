@@ -1,8 +1,9 @@
 module px4_msgs {
 module msg {
+module dds_ {
 
 @topic
-struct BatteryStatus {
+struct BatteryStatus_ {
     unsigned long long timestamp;
     boolean connected;
     float voltage_v;
@@ -43,5 +44,6 @@ struct BatteryStatus {
     float estimation_covariance_norm;
 };
 
+}; // dds_
 }; // msg
 }; // px4_msgs

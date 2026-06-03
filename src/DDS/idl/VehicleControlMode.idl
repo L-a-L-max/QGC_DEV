@@ -1,8 +1,9 @@
 module px4_msgs {
 module msg {
+module dds_ {
 
 @topic
-struct VehicleControlMode {
+struct VehicleControlMode_ {
     unsigned long long timestamp;
     boolean flag_armed;
     boolean flag_multicopter_position_control_enabled;
@@ -21,5 +22,6 @@ struct VehicleControlMode {
     octet source_id;
 };
 
+}; // dds_
 }; // msg
 }; // px4_msgs

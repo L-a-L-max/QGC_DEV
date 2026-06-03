@@ -6,7 +6,7 @@
   "topics": [
     {
       "dds_topic": "/fmu/out/vehicle_status_v1",
-      "dds_type": "px4_msgs::msg::VehicleStatus",
+      "dds_type": "px4_msgs::msg::dds_::VehicleStatus_",
       "fact_group": "vehicle",
       "description": "Override: PX4 v1.17+ publishes vehicle_status with _v1 suffix",
       "fields": [
@@ -29,7 +29,7 @@
     },
     {
       "dds_topic": "/fmu/out/battery_status_v1",
-      "dds_type": "px4_msgs::msg::BatteryStatus",
+      "dds_type": "px4_msgs::msg::dds_::BatteryStatus_",
       "fact_group": "battery",
       "description": "Override: PX4 v1.17+ publishes battery_status with _v1 suffix",
       "fields": [

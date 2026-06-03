@@ -1,8 +1,9 @@
 module px4_msgs {
 module msg {
+module dds_ {
 
 @topic
-struct TransponderReport {
+struct TransponderReport_ {
     unsigned long long timestamp;
     unsigned long icao_address;
     double lat;
@@ -20,5 +21,6 @@ struct TransponderReport {
     octet uas_id[18];
 };
 
+}; // dds_
 }; // msg
 }; // px4_msgs

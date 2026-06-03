@@ -1,8 +1,9 @@
 module px4_msgs {
 module msg {
+module dds_ {
 
 @topic
-struct VehicleAttitude {
+struct VehicleAttitude_ {
     unsigned long long timestamp;
     unsigned long long timestamp_sample;
     float q[4];
@@ -10,5 +11,6 @@ struct VehicleAttitude {
     octet quat_reset_counter;
 };
 
+}; // dds_
 }; // msg
 }; // px4_msgs

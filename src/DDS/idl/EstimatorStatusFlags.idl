@@ -1,8 +1,9 @@
 module px4_msgs {
 module msg {
+module dds_ {
 
 @topic
-struct EstimatorStatusFlags {
+struct EstimatorStatusFlags_ {
     unsigned long long timestamp;
     unsigned long long timestamp_sample;
     unsigned long control_status_changes;
@@ -70,5 +71,6 @@ struct EstimatorStatusFlags {
     boolean fs_bad_acc_clipping;
 };
 
+}; // dds_
 }; // msg
 }; // px4_msgs

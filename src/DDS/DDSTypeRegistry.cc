@@ -48,7 +48,7 @@ bool DDSTypeRegistry::hasType(const QString &typeName) const
 
 static QHash<QString, QVariant> extractVehicleAttitude(const void *sample)
 {
-    const auto *s = static_cast<const px4_msgs_msg_VehicleAttitude *>(sample);
+    const auto *s = static_cast<const px4_msgs_msg_dds__VehicleAttitude_ *>(sample);
     return {
         {QStringLiteral("timestamp"), QVariant::fromValue(s->timestamp)},
         {QStringLiteral("q[0]"), QVariant(static_cast<double>(s->q[0]))},
@@ -60,7 +60,7 @@ static QHash<QString, QVariant> extractVehicleAttitude(const void *sample)
 
 static QHash<QString, QVariant> extractVehicleGlobalPosition(const void *sample)
 {
-    const auto *s = static_cast<const px4_msgs_msg_VehicleGlobalPosition *>(sample);
+    const auto *s = static_cast<const px4_msgs_msg_dds__VehicleGlobalPosition_ *>(sample);
     return {
         {QStringLiteral("timestamp"), QVariant::fromValue(s->timestamp)},
         {QStringLiteral("lat"),       QVariant(s->lat)},
@@ -75,7 +75,7 @@ static QHash<QString, QVariant> extractVehicleGlobalPosition(const void *sample)
 
 static QHash<QString, QVariant> extractVehicleLocalPosition(const void *sample)
 {
-    const auto *s = static_cast<const px4_msgs_msg_VehicleLocalPosition *>(sample);
+    const auto *s = static_cast<const px4_msgs_msg_dds__VehicleLocalPosition_ *>(sample);
     return {
         {QStringLiteral("timestamp"), QVariant::fromValue(s->timestamp)},
         {QStringLiteral("x"),  QVariant(static_cast<double>(s->x))},
@@ -93,7 +93,7 @@ static QHash<QString, QVariant> extractVehicleLocalPosition(const void *sample)
 
 static QHash<QString, QVariant> extractSensorGps(const void *sample)
 {
-    const auto *s = static_cast<const px4_msgs_msg_SensorGps *>(sample);
+    const auto *s = static_cast<const px4_msgs_msg_dds__SensorGps_ *>(sample);
     return {
         {QStringLiteral("timestamp"),      QVariant::fromValue(s->timestamp)},
         {QStringLiteral("latitude_deg"),   QVariant(s->latitude_deg)},
@@ -114,7 +114,7 @@ static QHash<QString, QVariant> extractSensorGps(const void *sample)
 
 static QHash<QString, QVariant> extractBatteryStatus(const void *sample)
 {
-    const auto *s = static_cast<const px4_msgs_msg_BatteryStatus *>(sample);
+    const auto *s = static_cast<const px4_msgs_msg_dds__BatteryStatus_ *>(sample);
     return {
         {QStringLiteral("timestamp"),    QVariant::fromValue(s->timestamp)},
         {QStringLiteral("connected"),    QVariant(s->connected)},
@@ -132,7 +132,7 @@ static QHash<QString, QVariant> extractBatteryStatus(const void *sample)
 
 static QHash<QString, QVariant> extractVehicleStatus(const void *sample)
 {
-    const auto *s = static_cast<const px4_msgs_msg_VehicleStatus *>(sample);
+    const auto *s = static_cast<const px4_msgs_msg_dds__VehicleStatus_ *>(sample);
     return {
         {QStringLiteral("timestamp"),      QVariant::fromValue(s->timestamp)},
         {QStringLiteral("arming_state"),   QVariant(static_cast<int>(s->arming_state))},
@@ -146,7 +146,7 @@ static QHash<QString, QVariant> extractVehicleStatus(const void *sample)
 
 static QHash<QString, QVariant> extractWind(const void *sample)
 {
-    const auto *s = static_cast<const px4_msgs_msg_Wind *>(sample);
+    const auto *s = static_cast<const px4_msgs_msg_dds__Wind_ *>(sample);
     return {
         {QStringLiteral("timestamp"),       QVariant::fromValue(s->timestamp)},
         {QStringLiteral("windspeed_north"), QVariant(static_cast<double>(s->windspeed_north))},
@@ -156,7 +156,7 @@ static QHash<QString, QVariant> extractWind(const void *sample)
 
 static QHash<QString, QVariant> extractVehicleLandDetected(const void *sample)
 {
-    const auto *s = static_cast<const px4_msgs_msg_VehicleLandDetected *>(sample);
+    const auto *s = static_cast<const px4_msgs_msg_dds__VehicleLandDetected_ *>(sample);
     return {
         {QStringLiteral("timestamp"), QVariant::fromValue(s->timestamp)},
         {QStringLiteral("landed"),    QVariant(s->landed)},
@@ -167,7 +167,7 @@ static QHash<QString, QVariant> extractVehicleLandDetected(const void *sample)
 
 static QHash<QString, QVariant> extractHomePosition(const void *sample)
 {
-    const auto *s = static_cast<const px4_msgs_msg_HomePosition *>(sample);
+    const auto *s = static_cast<const px4_msgs_msg_dds__HomePosition_ *>(sample);
     return {
         {QStringLiteral("timestamp"), QVariant::fromValue(s->timestamp)},
         {QStringLiteral("lat"),       QVariant(s->lat)},
@@ -180,7 +180,7 @@ static QHash<QString, QVariant> extractHomePosition(const void *sample)
 
 static QHash<QString, QVariant> extractAirspeedValidated(const void *sample)
 {
-    const auto *s = static_cast<const px4_msgs_msg_AirspeedValidated *>(sample);
+    const auto *s = static_cast<const px4_msgs_msg_dds__AirspeedValidated_ *>(sample);
     return {
         {QStringLiteral("timestamp"),              QVariant::fromValue(s->timestamp)},
         {QStringLiteral("indicated_airspeed_m_s"), QVariant(static_cast<double>(s->indicated_airspeed_m_s))},
@@ -191,7 +191,7 @@ static QHash<QString, QVariant> extractAirspeedValidated(const void *sample)
 
 static QHash<QString, QVariant> extractVehicleOdometry(const void *sample)
 {
-    const auto *s = static_cast<const px4_msgs_msg_VehicleOdometry *>(sample);
+    const auto *s = static_cast<const px4_msgs_msg_dds__VehicleOdometry_ *>(sample);
     return {
         {QStringLiteral("timestamp"),  QVariant::fromValue(s->timestamp)},
         {QStringLiteral("position[0]"), QVariant(static_cast<double>(s->position[0]))},
@@ -209,7 +209,7 @@ static QHash<QString, QVariant> extractVehicleOdometry(const void *sample)
 
 static QHash<QString, QVariant> extractEstimatorStatusFlags(const void *sample)
 {
-    const auto *s = static_cast<const px4_msgs_msg_EstimatorStatusFlags *>(sample);
+    const auto *s = static_cast<const px4_msgs_msg_dds__EstimatorStatusFlags_ *>(sample);
     return {
         {QStringLiteral("timestamp"),     QVariant::fromValue(s->timestamp)},
         {QStringLiteral("cs_tilt_align"), QVariant(s->cs_tilt_align)},
@@ -223,7 +223,7 @@ static QHash<QString, QVariant> extractEstimatorStatusFlags(const void *sample)
 
 static QHash<QString, QVariant> extractFailsafeFlags(const void *sample)
 {
-    const auto *s = static_cast<const px4_msgs_msg_FailsafeFlags *>(sample);
+    const auto *s = static_cast<const px4_msgs_msg_dds__FailsafeFlags_ *>(sample);
     return {
         {QStringLiteral("timestamp"),                    QVariant::fromValue(s->timestamp)},
         {QStringLiteral("manual_control_signal_lost"),   QVariant(s->manual_control_signal_lost)},
@@ -239,7 +239,7 @@ static QHash<QString, QVariant> extractFailsafeFlags(const void *sample)
 
 static QHash<QString, QVariant> extractVehicleControlMode(const void *sample)
 {
-    const auto *s = static_cast<const px4_msgs_msg_VehicleControlMode *>(sample);
+    const auto *s = static_cast<const px4_msgs_msg_dds__VehicleControlMode_ *>(sample);
     return {
         {QStringLiteral("timestamp"),                      QVariant::fromValue(s->timestamp)},
         {QStringLiteral("flag_armed"),                     QVariant(s->flag_armed)},
@@ -254,7 +254,7 @@ static QHash<QString, QVariant> extractVehicleControlMode(const void *sample)
 
 static QHash<QString, QVariant> extractVehicleCommandAck(const void *sample)
 {
-    const auto *s = static_cast<const px4_msgs_msg_VehicleCommandAck *>(sample);
+    const auto *s = static_cast<const px4_msgs_msg_dds__VehicleCommandAck_ *>(sample);
     return {
         {QStringLiteral("timestamp"), QVariant::fromValue(s->timestamp)},
         {QStringLiteral("command"),   QVariant(static_cast<quint32>(s->command))},
@@ -264,7 +264,7 @@ static QHash<QString, QVariant> extractVehicleCommandAck(const void *sample)
 
 static QHash<QString, QVariant> extractGimbalDeviceAttitudeStatus(const void *sample)
 {
-    const auto *s = static_cast<const px4_msgs_msg_GimbalDeviceAttitudeStatus *>(sample);
+    const auto *s = static_cast<const px4_msgs_msg_dds__GimbalDeviceAttitudeStatus_ *>(sample);
     return {
         {QStringLiteral("timestamp"), QVariant::fromValue(s->timestamp)},
         {QStringLiteral("q[0]"), QVariant(static_cast<double>(s->q[0]))},
@@ -277,7 +277,7 @@ static QHash<QString, QVariant> extractGimbalDeviceAttitudeStatus(const void *sa
 
 static QHash<QString, QVariant> extractSensorCombined(const void *sample)
 {
-    const auto *s = static_cast<const px4_msgs_msg_SensorCombined *>(sample);
+    const auto *s = static_cast<const px4_msgs_msg_dds__SensorCombined_ *>(sample);
     return {
         {QStringLiteral("timestamp"),         QVariant::fromValue(s->timestamp)},
         {QStringLiteral("gyro_rad[0]"),       QVariant(static_cast<double>(s->gyro_rad[0]))},
@@ -291,7 +291,7 @@ static QHash<QString, QVariant> extractSensorCombined(const void *sample)
 
 static QHash<QString, QVariant> extractManualControlSetpoint(const void *sample)
 {
-    const auto *s = static_cast<const px4_msgs_msg_ManualControlSetpoint *>(sample);
+    const auto *s = static_cast<const px4_msgs_msg_dds__ManualControlSetpoint_ *>(sample);
     return {
         {QStringLiteral("timestamp"), QVariant::fromValue(s->timestamp)},
         {QStringLiteral("valid"),     QVariant(s->valid)},
@@ -304,7 +304,7 @@ static QHash<QString, QVariant> extractManualControlSetpoint(const void *sample)
 
 static QHash<QString, QVariant> extractVtolVehicleStatus(const void *sample)
 {
-    const auto *s = static_cast<const px4_msgs_msg_VtolVehicleStatus *>(sample);
+    const auto *s = static_cast<const px4_msgs_msg_dds__VtolVehicleStatus_ *>(sample);
     return {
         {QStringLiteral("timestamp"),              QVariant::fromValue(s->timestamp)},
         {QStringLiteral("vehicle_vtol_state"),     QVariant(static_cast<int>(s->vehicle_vtol_state))},
@@ -314,7 +314,7 @@ static QHash<QString, QVariant> extractVtolVehicleStatus(const void *sample)
 
 static QHash<QString, QVariant> extractTransponderReport(const void *sample)
 {
-    const auto *s = static_cast<const px4_msgs_msg_TransponderReport *>(sample);
+    const auto *s = static_cast<const px4_msgs_msg_dds__TransponderReport_ *>(sample);
     return {
         {QStringLiteral("timestamp"),    QVariant::fromValue(s->timestamp)},
         {QStringLiteral("icao_address"), QVariant(static_cast<quint32>(s->icao_address))},
@@ -335,46 +335,46 @@ static QHash<QString, QVariant> extractTransponderReport(const void *sample)
 
 void DDSTypeRegistry::_registerBuiltinTypes()
 {
-    _entries.insert(QStringLiteral("px4_msgs::msg::VehicleAttitude"),
-                    {&px4_msgs_msg_VehicleAttitude_desc, extractVehicleAttitude});
-    _entries.insert(QStringLiteral("px4_msgs::msg::VehicleGlobalPosition"),
-                    {&px4_msgs_msg_VehicleGlobalPosition_desc, extractVehicleGlobalPosition});
-    _entries.insert(QStringLiteral("px4_msgs::msg::VehicleLocalPosition"),
-                    {&px4_msgs_msg_VehicleLocalPosition_desc, extractVehicleLocalPosition});
-    _entries.insert(QStringLiteral("px4_msgs::msg::SensorGps"),
-                    {&px4_msgs_msg_SensorGps_desc, extractSensorGps});
-    _entries.insert(QStringLiteral("px4_msgs::msg::BatteryStatus"),
-                    {&px4_msgs_msg_BatteryStatus_desc, extractBatteryStatus});
-    _entries.insert(QStringLiteral("px4_msgs::msg::VehicleStatus"),
-                    {&px4_msgs_msg_VehicleStatus_desc, extractVehicleStatus});
-    _entries.insert(QStringLiteral("px4_msgs::msg::Wind"),
-                    {&px4_msgs_msg_Wind_desc, extractWind});
-    _entries.insert(QStringLiteral("px4_msgs::msg::VehicleLandDetected"),
-                    {&px4_msgs_msg_VehicleLandDetected_desc, extractVehicleLandDetected});
-    _entries.insert(QStringLiteral("px4_msgs::msg::HomePosition"),
-                    {&px4_msgs_msg_HomePosition_desc, extractHomePosition});
-    _entries.insert(QStringLiteral("px4_msgs::msg::AirspeedValidated"),
-                    {&px4_msgs_msg_AirspeedValidated_desc, extractAirspeedValidated});
-    _entries.insert(QStringLiteral("px4_msgs::msg::VehicleOdometry"),
-                    {&px4_msgs_msg_VehicleOdometry_desc, extractVehicleOdometry});
-    _entries.insert(QStringLiteral("px4_msgs::msg::EstimatorStatusFlags"),
-                    {&px4_msgs_msg_EstimatorStatusFlags_desc, extractEstimatorStatusFlags});
-    _entries.insert(QStringLiteral("px4_msgs::msg::FailsafeFlags"),
-                    {&px4_msgs_msg_FailsafeFlags_desc, extractFailsafeFlags});
-    _entries.insert(QStringLiteral("px4_msgs::msg::VehicleControlMode"),
-                    {&px4_msgs_msg_VehicleControlMode_desc, extractVehicleControlMode});
-    _entries.insert(QStringLiteral("px4_msgs::msg::VehicleCommandAck"),
-                    {&px4_msgs_msg_VehicleCommandAck_desc, extractVehicleCommandAck});
-    _entries.insert(QStringLiteral("px4_msgs::msg::GimbalDeviceAttitudeStatus"),
-                    {&px4_msgs_msg_GimbalDeviceAttitudeStatus_desc, extractGimbalDeviceAttitudeStatus});
-    _entries.insert(QStringLiteral("px4_msgs::msg::SensorCombined"),
-                    {&px4_msgs_msg_SensorCombined_desc, extractSensorCombined});
-    _entries.insert(QStringLiteral("px4_msgs::msg::ManualControlSetpoint"),
-                    {&px4_msgs_msg_ManualControlSetpoint_desc, extractManualControlSetpoint});
-    _entries.insert(QStringLiteral("px4_msgs::msg::VtolVehicleStatus"),
-                    {&px4_msgs_msg_VtolVehicleStatus_desc, extractVtolVehicleStatus});
-    _entries.insert(QStringLiteral("px4_msgs::msg::TransponderReport"),
-                    {&px4_msgs_msg_TransponderReport_desc, extractTransponderReport});
+    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::VehicleAttitude_"),
+                    {&px4_msgs_msg_dds__VehicleAttitude__desc, extractVehicleAttitude});
+    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::VehicleGlobalPosition_"),
+                    {&px4_msgs_msg_dds__VehicleGlobalPosition__desc, extractVehicleGlobalPosition});
+    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::VehicleLocalPosition_"),
+                    {&px4_msgs_msg_dds__VehicleLocalPosition__desc, extractVehicleLocalPosition});
+    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::SensorGps_"),
+                    {&px4_msgs_msg_dds__SensorGps__desc, extractSensorGps});
+    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::BatteryStatus_"),
+                    {&px4_msgs_msg_dds__BatteryStatus__desc, extractBatteryStatus});
+    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::VehicleStatus_"),
+                    {&px4_msgs_msg_dds__VehicleStatus__desc, extractVehicleStatus});
+    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::Wind_"),
+                    {&px4_msgs_msg_dds__Wind__desc, extractWind});
+    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::VehicleLandDetected_"),
+                    {&px4_msgs_msg_dds__VehicleLandDetected__desc, extractVehicleLandDetected});
+    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::HomePosition_"),
+                    {&px4_msgs_msg_dds__HomePosition__desc, extractHomePosition});
+    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::AirspeedValidated_"),
+                    {&px4_msgs_msg_dds__AirspeedValidated__desc, extractAirspeedValidated});
+    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::VehicleOdometry_"),
+                    {&px4_msgs_msg_dds__VehicleOdometry__desc, extractVehicleOdometry});
+    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::EstimatorStatusFlags_"),
+                    {&px4_msgs_msg_dds__EstimatorStatusFlags__desc, extractEstimatorStatusFlags});
+    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::FailsafeFlags_"),
+                    {&px4_msgs_msg_dds__FailsafeFlags__desc, extractFailsafeFlags});
+    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::VehicleControlMode_"),
+                    {&px4_msgs_msg_dds__VehicleControlMode__desc, extractVehicleControlMode});
+    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::VehicleCommandAck_"),
+                    {&px4_msgs_msg_dds__VehicleCommandAck__desc, extractVehicleCommandAck});
+    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::GimbalDeviceAttitudeStatus_"),
+                    {&px4_msgs_msg_dds__GimbalDeviceAttitudeStatus__desc, extractGimbalDeviceAttitudeStatus});
+    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::SensorCombined_"),
+                    {&px4_msgs_msg_dds__SensorCombined__desc, extractSensorCombined});
+    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::ManualControlSetpoint_"),
+                    {&px4_msgs_msg_dds__ManualControlSetpoint__desc, extractManualControlSetpoint});
+    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::VtolVehicleStatus_"),
+                    {&px4_msgs_msg_dds__VtolVehicleStatus__desc, extractVtolVehicleStatus});
+    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::TransponderReport_"),
+                    {&px4_msgs_msg_dds__TransponderReport__desc, extractTransponderReport});
 
     qInfo() << "[DDSTypeRegistry] Registered" << _entries.size() << "IDL types";
 }

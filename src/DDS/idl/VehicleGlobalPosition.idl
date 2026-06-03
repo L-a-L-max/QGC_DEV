@@ -1,8 +1,9 @@
 module px4_msgs {
 module msg {
+module dds_ {
 
 @topic
-struct VehicleGlobalPosition {
+struct VehicleGlobalPosition_ {
     unsigned long long timestamp;
     unsigned long long timestamp_sample;
     double lat;
@@ -23,5 +24,6 @@ struct VehicleGlobalPosition {
     boolean dead_reckoning;
 };
 
+}; // dds_
 }; // msg
 }; // px4_msgs

@@ -1,8 +1,9 @@
 module px4_msgs {
 module msg {
+module dds_ {
 
 @topic
-struct VehicleOdometry {
+struct VehicleOdometry_ {
     unsigned long long timestamp;
     unsigned long long timestamp_sample;
     octet pose_frame;
@@ -18,5 +19,6 @@ struct VehicleOdometry {
     octet quality;
 };
 
+}; // dds_
 }; // msg
 }; // px4_msgs
