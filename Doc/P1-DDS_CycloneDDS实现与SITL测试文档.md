@@ -288,11 +288,14 @@ CMake Error in CMakeLists.txt:
   "QGroundControl_autogen_timestamp_deps" does not exist.
 ```
 
-**原因：** CMake 的 CONFIG 模式找到了 CycloneDDS 的配置文件（`CycloneDDSConfig.cmake`），但该配置文件没有正确创建 `CycloneDDS::ddsc` 导入目标。这通常发生在：
-- CycloneDDS 通过 apt 安装，CMake 配置不完整
-- CycloneDDS 安装后依赖的其他库（如 iceoryx）缺失
+**原因分析（两层原因）：**
 
-**修复方法：** 此问题已在最新代码中修复。`FindCycloneDDS.cmake` 现在会验证 `CycloneDDS::ddsc` 目标是否存在，如果不存在则回退到手动搜索模式。请确保拉取最新代码：
+1. **CMake CONFIG 作用域问题（CMake 4.x）：** `find_package(CycloneDDS CONFIG)` 在 Find 模块内部调用时，CONFIG 创建的 IMPORTED target 在配置阶段存在，但在 CMake 的生成阶段丢失作用域。这是 CMake 4.x 版本中 Find 模块内嵌套 CONFIG 调用的已知行为。
+
+2. **多版本 CycloneDDS 路径混用：** 如果系统同时安装了手动编译的 CycloneDDS（`/usr/local`）和 ROS 2 自带的 CycloneDDS（`/opt/ros/humble`），CONFIG 模式可能混用两个安装的头文件和库文件（例如头文件来自 `/opt/ros/humble/include`，库来自 `/usr/local/lib`），导致目标创建失败。
+
+**修复方法：** 最新代码的 `FindCycloneDDS.cmake` 已完全移除 `find_package(CycloneDDS CONFIG)` 调用，改用**前缀匹配搜索**：按优先级遍历候选安装前缀（`/usr/local` → `/usr` → ROS 路径），要求头文件和库文件必须来自**同一前缀**，然后自建 GLOBAL IMPORTED target。
+
 ```bash
 git pull origin DDS_P1
 rm -rf build && mkdir build && cd build
@@ -304,7 +307,7 @@ cmake .. -G Ninja \
     -DQGC_ENABLE_DDS=ON
 ```
 
-如果仍然找不到，指定安装路径：
+**如果系统存在多版本 CycloneDDS，** 用 `-DCYCLONEDDS_ROOT=` 指定要使用的版本：
 ```bash
 cmake .. -G Ninja \
     -DCMAKE_BUILD_TYPE=Debug \
@@ -315,9 +318,18 @@ cmake .. -G Ninja \
     -DCYCLONEDDS_ROOT=/usr/local
 ```
 
+**CMake 输出应显示同一前缀：**
+```
+-- CycloneDDS found in prefix: /usr/local
+-- CycloneDDS: /usr/local/lib/libddsc.so
+-- CycloneDDS include: /usr/local/include
+```
+
+如果看到头文件和库来自不同路径（如 include 来自 `/opt/ros/humble`，lib 来自 `/usr/local`），说明匹配失败，请用 `-DCYCLONEDDS_ROOT=` 显式指定。
+
 #### 错误 2：`Could NOT find CycloneDDS (missing: CycloneDDS_LIBRARY CycloneDDS_INCLUDE_DIR)`
 
-**原因：** 三种查找策略（CONFIG、pkg-config、手动搜索）都未找到 CycloneDDS。
+**原因：** 所有搜索策略（前缀匹配、pkg-config、默认路径）都未找到 CycloneDDS。
 
 **排查步骤：**
 ```bash
@@ -325,10 +337,7 @@ cmake .. -G Ninja \
 find / -name "libddsc.so*" 2>/dev/null
 find / -name "dds.h" -path "*/dds/*" 2>/dev/null
 
-# 2. 检查 CMake config 文件
-find / -name "CycloneDDSConfig.cmake" 2>/dev/null
-
-# 3. 检查 pkg-config
+# 2. 检查 pkg-config
 pkg-config --libs --cflags cyclonedds 2>/dev/null
 ```
 
