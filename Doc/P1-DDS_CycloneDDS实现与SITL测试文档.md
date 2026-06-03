@@ -207,12 +207,54 @@ set_source_files_properties(... PROPERTIES COMPILE_FLAGS "-w")
 - PX4-Autopilot 源码
 - Gazebo（PX4 SITL 仿真用）
 
-### 3.2 编译 QGC
+### 3.2 CycloneDDS 安装
+
+QGC 的 `FindCycloneDDS.cmake` 支持三种查找策略（按优先级）：
+
+1. **CMake Config**（`CycloneDDSConfig.cmake`）— 从源码编译安装时自动提供
+2. **pkg-config**（`cyclonedds.pc`）— apt 安装或自定义编译可能提供
+3. **手动搜索** — 在 `/usr/local/`, `/usr/`, `/opt/cyclonedds/`, ROS 路径下查找
+
+**方式 A：从源码编译安装（推荐）**
+```bash
+git clone https://github.com/eclipse-cyclonedds/cyclonedds.git
+cd cyclonedds
+git checkout 0.10.5
+mkdir build && cd build
+cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local -DBUILD_EXAMPLES=OFF
+make -j$(nproc)
+sudo make install
+sudo ldconfig
+```
+
+安装后验证：
+```bash
+# 检查库文件
+ls /usr/local/lib/libddsc.so
+# 检查头文件
+ls /usr/local/include/dds/dds.h
+# 检查 CMake config（find_package CONFIG 模式使用）
+ls /usr/local/lib/cmake/CycloneDDS/CycloneDDSConfig.cmake
+```
+
+**方式 B：如果 CycloneDDS 安装在自定义路径**
+```bash
+# 方式1：设置环境变量
+export CYCLONEDDS_HOME=/你的安装路径
+
+# 方式2：cmake 时指定
+cmake .. -DCYCLONEDDS_ROOT=/你的安装路径 ...
+```
+
+### 3.3 编译 QGC
 
 ```bash
 cd ~/QGC_DDS/qgc_dev
 git checkout DDS_P1
 git pull origin DDS_P1
+
+# 清理旧的构建（如果之前编译失败）
+rm -rf build
 
 mkdir -p build && cd build
 cmake .. -G Ninja \
@@ -225,7 +267,108 @@ cmake .. -G Ninja \
 ninja -j$(nproc)
 ```
 
-### 3.3 PX4 SITL 端到端测试
+**CMake 配置阶段预期输出（关于 CycloneDDS）：**
+```
+-- Found CycloneDDS via CMake config: 0.10.5
+```
+或：
+```
+-- CycloneDDS: /usr/local/lib/libddsc.so
+-- CycloneDDS include: /usr/local/include
+```
+
+### 3.4 常见编译错误排查
+
+#### 错误 1：`The dependency target "CycloneDDS::ddsc" does not exist`
+
+**完整错误信息：**
+```
+CMake Error in CMakeLists.txt:
+  The dependency target "CycloneDDS::ddsc" of target
+  "QGroundControl_autogen_timestamp_deps" does not exist.
+```
+
+**原因：** CMake 的 CONFIG 模式找到了 CycloneDDS 的配置文件（`CycloneDDSConfig.cmake`），但该配置文件没有正确创建 `CycloneDDS::ddsc` 导入目标。这通常发生在：
+- CycloneDDS 通过 apt 安装，CMake 配置不完整
+- CycloneDDS 安装后依赖的其他库（如 iceoryx）缺失
+
+**修复方法：** 此问题已在最新代码中修复。`FindCycloneDDS.cmake` 现在会验证 `CycloneDDS::ddsc` 目标是否存在，如果不存在则回退到手动搜索模式。请确保拉取最新代码：
+```bash
+git pull origin DDS_P1
+rm -rf build && mkdir build && cd build
+cmake .. -G Ninja \
+    -DCMAKE_BUILD_TYPE=Debug \
+    -DCMAKE_PREFIX_PATH=$QT_DIR \
+    -DCMAKE_C_COMPILER=gcc-13 \
+    -DCMAKE_CXX_COMPILER=g++-13 \
+    -DQGC_ENABLE_DDS=ON
+```
+
+如果仍然找不到，指定安装路径：
+```bash
+cmake .. -G Ninja \
+    -DCMAKE_BUILD_TYPE=Debug \
+    -DCMAKE_PREFIX_PATH=$QT_DIR \
+    -DCMAKE_C_COMPILER=gcc-13 \
+    -DCMAKE_CXX_COMPILER=g++-13 \
+    -DQGC_ENABLE_DDS=ON \
+    -DCYCLONEDDS_ROOT=/usr/local
+```
+
+#### 错误 2：`Could NOT find CycloneDDS (missing: CycloneDDS_LIBRARY CycloneDDS_INCLUDE_DIR)`
+
+**原因：** 三种查找策略（CONFIG、pkg-config、手动搜索）都未找到 CycloneDDS。
+
+**排查步骤：**
+```bash
+# 1. 检查 CycloneDDS 是否安装
+find / -name "libddsc.so*" 2>/dev/null
+find / -name "dds.h" -path "*/dds/*" 2>/dev/null
+
+# 2. 检查 CMake config 文件
+find / -name "CycloneDDSConfig.cmake" 2>/dev/null
+
+# 3. 检查 pkg-config
+pkg-config --libs --cflags cyclonedds 2>/dev/null
+```
+
+如果以上都没找到，说明 CycloneDDS 未安装，请按 3.2 节指引安装。
+
+如果找到了但路径不在标准位置，用 `-DCYCLONEDDS_ROOT=` 或 `CYCLONEDDS_HOME` 环境变量指定：
+```bash
+# 例如 CycloneDDS 安装在 /opt/cyclonedds
+export CYCLONEDDS_HOME=/opt/cyclonedds
+cmake .. -DCYCLONEDDS_ROOT=/opt/cyclonedds ...
+```
+
+#### 错误 3：`Cannot open input file ... .qml: No such file or directory`
+
+**示例：**
+```
+Cannot open input file .../build/qml/QGroundControl/AppSettings/LoggingSettings.qml:No such file or directory
+```
+
+**原因：** 这是 Qt QML linter 的警告，不是错误。首次编译前 QML 文件尚未生成到 build 目录，属于 QGC 官方已知行为。**不影响编译和运行，可以忽略。**
+
+#### 错误 4：VehicleComponent metatype / static assertion 错误
+
+**示例：**
+```
+static assertion failed: Pointer Meta Types must either point to
+fully-defined types or be declared with Q_DECLARE_OPAQUE_POINTER(T *)
+```
+
+**原因：** GCC 12 与 Qt 6.10+ 不兼容。Qt 6.10 的 constexpr MOC 生成器对类型完整性要求更严格。
+
+**修复：** 升级到 GCC 13：
+```bash
+sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+sudo apt update
+sudo apt install g++-13 gcc-13
+```
+然后在 cmake 时指定 `-DCMAKE_C_COMPILER=gcc-13 -DCMAKE_CXX_COMPILER=g++-13`。
+
+### 3.5 PX4 SITL 端到端测试
 
 #### 终端 1 — 启动 Micro XRCE-DDS Agent
 ```bash
@@ -257,7 +400,7 @@ QT_LOGGING_RULES="Comms.DDSLink.debug=true" ./QGroundControl
 ros2 topic echo /fmu/out/vehicle_attitude
 ```
 
-### 3.4 验证步骤
+### 3.6 验证步骤
 
 | 步骤 | 验证内容 | 预期结果 |
 |------|---------|---------|
@@ -269,7 +412,7 @@ ros2 topic echo /fmu/out/vehicle_attitude
 | 6 | 遥测更新 | 姿态、GPS、电池数据实时更新 |
 | 7 | 断开连接 | 日志显示 "DDS link disconnected"，无崩溃 |
 
-### 3.5 DDS 调试日志说明
+### 3.7 DDS 调试日志说明
 
 开启 DDS 调试日志：
 ```bash
