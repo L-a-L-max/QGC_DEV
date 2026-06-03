@@ -1,0 +1,52 @@
+{
+  "vendor": "px4_custom",
+  "version": "1.0.0",
+  "description": "Example: custom PX4 topic mapping overlay. Copy this file to ~/.config/QGroundControl/dds_mappings/ and modify topic names to match your PX4 version. Topics defined here override the default mapping.",
+  "base": "_default",
+  "topics": [
+    {
+      "dds_topic": "/fmu/out/vehicle_status_v1",
+      "dds_type": "px4_msgs::msg::VehicleStatus",
+      "fact_group": "vehicle",
+      "description": "Override: PX4 v1.17+ publishes vehicle_status with _v1 suffix",
+      "fields": [
+        {
+          "dds_field": "arming_state",
+          "fact_name": "armed",
+          "description": "Arming state: 1=standby, 2=armed"
+        },
+        {
+          "dds_field": "nav_state",
+          "fact_name": "flightMode",
+          "description": "Navigation state / flight mode enumeration"
+        },
+        {
+          "dds_field": "vehicle_type",
+          "fact_name": "vehicleType",
+          "description": "Vehicle type (1=rotary wing, 2=fixed wing, etc.)"
+        }
+      ]
+    },
+    {
+      "dds_topic": "/fmu/out/battery_status_v1",
+      "dds_type": "px4_msgs::msg::BatteryStatus",
+      "fact_group": "battery",
+      "description": "Override: PX4 v1.17+ publishes battery_status with _v1 suffix",
+      "fields": [
+        {
+          "dds_field": "voltage_v",
+          "fact_name": "voltage"
+        },
+        {
+          "dds_field": "current_a",
+          "fact_name": "current"
+        },
+        {
+          "dds_field": "remaining",
+          "fact_name": "percentRemaining",
+          "scale": 100.0
+        }
+      ]
+    }
+  ]
+}

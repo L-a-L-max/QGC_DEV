@@ -65,14 +65,25 @@ P1 建立了 DDS 网络层（CycloneDDS participant）和数据处理管道（�
 
 每个消息类型都有一个对应的字段提取器函数，负责将 IDL 生成的 C 结构体字段转换为 QGC 映射引擎可识别的键值对。
 
-### 2.3 DDSLink 更新 — 真正的数据读取
+### 2.3 配置驱动的话题订阅
+
+**设计原则**：QGC 代码中不硬编码任何 PX4 话题名。所有话题名来自 JSON 配置文件（`_default.json`）。
+
+- 配置文件中的 `dds_topic` 字段 = PX4 实际发布的话题名（**可变**，取决于 PX4 版本）
+- QGC 内部的 `fact_group` + `fact_name` = QGC UI 绑定的变量名（**不变**）
+- 两者通过 JSON 映射建立关系，用户修改配置即可适配不同 PX4 版本
+
+**PX4 v1.17 话题名差异**：部分话题带 `_v1` 后缀（如 `vehicle_status_v1`、`battery_status_v1`），默认配置已适配。
+
+### 2.4 DDSLink 更新 — 真正的数据读取
 
 **`_subscribeToTopics()` 实现**:
 ```
 对于映射表中的每个话题:
   1. 从 DDSMappingEngine 获取话题的 dds_type 名
   2. 在 DDSTypeRegistry 中查找对应的类型描述符
-  3. 调用 dds_create_topic(participant, descriptor, topicName)
+  3. 调用 dds_create_topic(participant, descriptor, "rt" + dds_topic)
+     话题名直接来自配置文件，不做任何硬编码修改
   4. 调用 dds_create_reader(participant, topic, QoS, listener)
   5. 存储 reader 和 extractor 到 ReaderInfo
 ```
@@ -98,7 +109,7 @@ PX4 SITL → MicroXRCE-DDS Agent → CycloneDDS Network
     → QGC UI 自动更新
 ```
 
-### 2.4 DDSVehicleManager — 纯 DDS Vehicle 创建
+### 2.5 DDSVehicleManager — 纯 DDS Vehicle 创建
 
 **文件**: `src/DDS/DDSVehicleManager.h`, `src/DDS/DDSVehicleManager.cc`
 
@@ -112,7 +123,7 @@ PX4 SITL → MicroXRCE-DDS Agent → CycloneDDS Network
 
 这样复用了 QGC 完整的 Vehicle 初始化流程（FactGroups、FirmwarePlugin、参数系统等）。
 
-### 2.5 CMake 集成
+### 2.6 CMake 集成
 
 **修改文件**: `src/Comms/CMakeLists.txt`
 
