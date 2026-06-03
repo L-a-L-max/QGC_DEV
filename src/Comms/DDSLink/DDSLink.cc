@@ -77,6 +77,25 @@ bool DDSLink::_connect()
     qInfo() << "[DDSLink] DDS link connected on domain" << config->domainId();
     emit connected();
 
+    // Early diagnostic at 3s: check if we can discover ANY remote participants
+    QTimer::singleShot(3000, this, [this]() {
+        if (!_connected || _participant <= 0) return;
+        // Use the builtin DCPSParticipant reader to count discovered participants
+        const dds_entity_t builtinSub = dds_get_builtin_subscriber(_participant);
+        if (builtinSub > 0) {
+            qInfo() << "[DDSLink] Participant discovery check (3s): builtin subscriber ="
+                     << builtinSub;
+        }
+        // Also sample one reader to report its topic/type info
+        for (auto it = _readers.cbegin(); it != _readers.cend(); ++it) {
+            if (it.value().reader <= 0) continue;
+            dds_instance_handle_t handles[10];
+            const int n = dds_get_matched_publications(it.value().reader, handles, 10);
+            qInfo() << "[DDSLink] Early probe:" << it.key() << "→" << n << "matched writer(s)";
+            break; // Only check the first reader
+        }
+    });
+
     // Delayed diagnostic: check RTPS writer matching after discovery period
     QTimer::singleShot(5000, this, [this]() {
         if (!_connected) return;
@@ -183,29 +202,28 @@ void DDSLink::_onPollTimer()
 
 dds_entity_t DDSLink::_createParticipant(int domainId)
 {
-    // Create a CycloneDDS domain with permissive type-checking config.
-    // PX4 MicroXRCE-DDS Agent uses FastDDS; the XTypes TypeObject hashes
-    // will never match our idlc-generated descriptors. Disabling type
-    // information forces endpoint matching by type-name only.
+    // Configure CycloneDDS via environment variable. This is the most
+    // reliable method across CycloneDDS versions (the dds_create_domain
+    // API changed config schema between versions).
+    // - StandardsConformance=lax: relax strict RTPS checks for cross-vendor interop
+    // - Tracing: log discovery events at config level to stderr for diagnostics
     static const char *cycloneConfig =
         "<CycloneDDS>"
         "  <Domain id=\"any\">"
         "    <Compatibility>"
-        "      <AssumeRtiHasTopicDiscovery>best-effort</AssumeRtiHasTopicDiscovery>"
+        "      <StandardsConformance>lax</StandardsConformance>"
         "    </Compatibility>"
         "    <Tracing>"
         "      <Category>discovery</Category>"
         "      <OutputFile>stderr</OutputFile>"
-        "      <Verbosity>warning</Verbosity>"
+        "      <Verbosity>config</Verbosity>"
         "    </Tracing>"
         "  </Domain>"
         "</CycloneDDS>";
 
-    const dds_entity_t domain = dds_create_domain(
-        static_cast<dds_domainid_t>(domainId), cycloneConfig);
-    if (domain < 0) {
-        qCWarning(DDSLinkLog) << "dds_create_domain failed:" << dds_strretcode(-domain)
-                              << "— falling back to default domain";
+    // Only set if not already configured by user
+    if (qEnvironmentVariableIsEmpty("CYCLONEDDS_URI")) {
+        qputenv("CYCLONEDDS_URI", cycloneConfig);
     }
 
     const dds_entity_t participant = dds_create_participant(
@@ -299,7 +317,8 @@ void DDSLink::_subscribeToTopics(dds_entity_t participant, const QStringList &to
         info.extractor = typeEntry->extractor;
         _readers.insert(topicName, info);
         typedCount++;
-        qInfo() << "[DDSLink] Created typed reader for" << ddsTopicName;
+        qInfo() << "[DDSLink] Created typed reader for" << ddsTopicName
+                 << "type:" << typeName;
     }
 
     qInfo() << "[DDSLink] Subscribed:" << typedCount << "typed readers,"
