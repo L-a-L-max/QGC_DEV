@@ -76,6 +76,48 @@ bool DDSLink::_connect()
     _connected = true;
     qInfo() << "[DDSLink] DDS link connected on domain" << config->domainId();
     emit connected();
+
+    // Delayed diagnostic: check RTPS writer matching after discovery period
+    QTimer::singleShot(5000, this, [this]() {
+        if (!_connected) return;
+        int matchedCount = 0;
+        int unmatchedCount = 0;
+        for (auto it = _readers.cbegin(); it != _readers.cend(); ++it) {
+            if (it.value().reader <= 0) continue;
+            dds_instance_handle_t handles[10];
+            const int n = dds_get_matched_publications(it.value().reader, handles, 10);
+            if (n > 0) {
+                matchedCount++;
+            } else {
+                unmatchedCount++;
+            }
+        }
+        qInfo() << "[DDSLink] RTPS match diagnostic (5s):" << matchedCount
+                 << "readers matched a writer," << unmatchedCount << "unmatched";
+        if (unmatchedCount > 0 && matchedCount == 0) {
+            qWarning() << "[DDSLink] No readers matched any writer!"
+                        << "Possible causes: DDS type name mismatch, network issue,"
+                        << "or PX4 DDS Agent not publishing."
+                        << "Run 'ros2 topic info /fmu/out/vehicle_status_v1 --verbose'"
+                        << "to check publisher type name.";
+        }
+    });
+
+    // Second diagnostic at 15s with per-reader detail
+    QTimer::singleShot(15000, this, [this]() {
+        if (!_connected) return;
+        for (auto it = _readers.cbegin(); it != _readers.cend(); ++it) {
+            if (it.value().reader <= 0) continue;
+            dds_instance_handle_t handles[10];
+            const int n = dds_get_matched_publications(it.value().reader, handles, 10);
+            if (n > 0) {
+                qInfo() << "[DDSLink] MATCHED:" << it.key() << "→" << n << "writer(s)";
+            } else {
+                qInfo() << "[DDSLink] UNMATCHED:" << it.key();
+            }
+        }
+    });
+
     return true;
 }
 
