@@ -52,22 +52,7 @@ private:
     void         _destroyParticipant(dds_entity_t participant);
     void         _subscribeToTopics(dds_entity_t participant, const QStringList &topicNames);
     QStringList  _runDiscovery(dds_entity_t participant);
-
-    dds_entity_t _createTypedReader(dds_entity_t participant,
-                                    const QString &topicName,
-                                    const dds_topic_descriptor_t *desc);
     QHash<QString, QVariant> _readSample(dds_entity_t reader, const QString &topicName);
-
-    static QHash<QString, QVariant> _parseVehicleAttitude(const void *sample);
-    static QHash<QString, QVariant> _parseVehicleGlobalPosition(const void *sample);
-    static QHash<QString, QVariant> _parseVehicleLocalPosition(const void *sample);
-    static QHash<QString, QVariant> _parseBatteryStatus(const void *sample);
-    static QHash<QString, QVariant> _parseVehicleStatus(const void *sample);
-
-    const dds_topic_descriptor_t *_descriptorForTopic(const QString &topicName) const;
-
-    using SampleParser = QHash<QString, QVariant> (*)(const void *);
-    SampleParser _parserForTopic(const QString &topicName) const;
 
     DDSConfiguration *_ddsConfig() const;
 
@@ -81,7 +66,6 @@ private:
 
     struct ReaderInfo {
         dds_entity_t reader = DDS_ENTITY_NIL;
-        SampleParser parser = nullptr;
     };
 
     QHash<QString, ReaderInfo> _readers;
