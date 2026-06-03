@@ -46,6 +46,7 @@ struct DDSFieldMapping {
 /// A topic-level mapping: one DDS topic → multiple field mappings.
 struct DDSTopicMapping {
     QString ddsTopicName;               // e.g. "/fmu/out/vehicle_attitude"
+    QString ddsTypeName;                // e.g. "px4_msgs::msg::VehicleAttitude"
     QString defaultFactGroup;           // default FactGroup for fields that don't override
     QVector<DDSFieldMapping> fields;    // field-level mappings
 };

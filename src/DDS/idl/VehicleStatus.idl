@@ -1,0 +1,25 @@
+module px4_msgs {
+module msg {
+
+@topic
+struct VehicleStatus {
+    unsigned long long timestamp;
+    unsigned long long armed_time;
+    unsigned long long takeoff_time;
+    octet arming_state;
+    octet latest_arming_reason;
+    octet latest_disarming_reason;
+    unsigned long long nav_state_timestamp;
+    octet nav_state_user_intention;
+    octet nav_state;
+    octet executor_in_charge;
+    octet nav_state_display;
+    boolean accepts_offboard_setpoints;
+    unsigned long valid_nav_states_mask;
+    unsigned long can_set_nav_states_mask;
+    octet hil_state;
+    octet vehicle_type;
+};
+
+}; // msg
+}; // px4_msgs

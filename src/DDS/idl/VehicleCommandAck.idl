@@ -1,0 +1,17 @@
+module px4_msgs {
+module msg {
+
+@topic
+struct VehicleCommandAck {
+    unsigned long long timestamp;
+    unsigned long command;
+    octet result;
+    octet result_param1;
+    long result_param2;
+    octet target_system;
+    unsigned short target_component;
+    boolean from_external;
+};
+
+}; // msg
+}; // px4_msgs

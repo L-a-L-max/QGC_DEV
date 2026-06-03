@@ -1,0 +1,25 @@
+module px4_msgs {
+module msg {
+
+@topic
+struct VehicleControlMode {
+    unsigned long long timestamp;
+    boolean flag_armed;
+    boolean flag_multicopter_position_control_enabled;
+    boolean flag_control_manual_enabled;
+    boolean flag_control_auto_enabled;
+    boolean flag_control_offboard_enabled;
+    boolean flag_control_position_enabled;
+    boolean flag_control_velocity_enabled;
+    boolean flag_control_altitude_enabled;
+    boolean flag_control_climb_rate_enabled;
+    boolean flag_control_acceleration_enabled;
+    boolean flag_control_attitude_enabled;
+    boolean flag_control_rates_enabled;
+    boolean flag_control_allocation_enabled;
+    boolean flag_control_termination_enabled;
+    octet source_id;
+};
+
+}; // msg
+}; // px4_msgs

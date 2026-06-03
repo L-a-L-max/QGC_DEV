@@ -7,6 +7,8 @@
 #include "DDSMappingEngine.h"
 #include "DDSTransformRegistry.h"
 #include "DDSDataInjector.h"
+#include "DDSTypeRegistry.h"
+#include "DDSVehicleManager.h"
 
 #include <dds/dds.h>
 
@@ -58,7 +60,9 @@ private:
 
     DDSMappingEngine     _mappingEngine;
     DDSTransformRegistry _transformRegistry;
+    DDSTypeRegistry      _typeRegistry;
     DDSDataInjector      _dataInjector;
+    DDSVehicleManager    _vehicleManager;
 
     QTimer               _pollTimer;
     dds_entity_t         _participant = DDS_ENTITY_NIL;
@@ -66,6 +70,7 @@ private:
 
     struct ReaderInfo {
         dds_entity_t reader = DDS_ENTITY_NIL;
+        DDSFieldExtractorFunc extractor;
     };
 
     QHash<QString, ReaderInfo> _readers;

@@ -1,0 +1,55 @@
+module px4_msgs {
+module msg {
+
+@topic
+struct FailsafeFlags {
+    unsigned long long timestamp;
+    unsigned long mode_req_angular_velocity;
+    unsigned long mode_req_attitude;
+    unsigned long mode_req_local_alt;
+    unsigned long mode_req_local_position;
+    unsigned long mode_req_local_position_relaxed;
+    unsigned long mode_req_global_position;
+    unsigned long mode_req_global_position_relaxed;
+    unsigned long mode_req_mission;
+    unsigned long mode_req_offboard_signal;
+    unsigned long mode_req_home_position;
+    unsigned long mode_req_wind_and_flight_time_compliance;
+    unsigned long mode_req_prevent_arming;
+    unsigned long mode_req_manual_control;
+    unsigned long mode_req_other;
+    boolean angular_velocity_invalid;
+    boolean attitude_invalid;
+    boolean local_altitude_invalid;
+    boolean local_position_invalid;
+    boolean local_position_invalid_relaxed;
+    boolean local_velocity_invalid;
+    boolean global_position_invalid;
+    boolean global_position_invalid_relaxed;
+    boolean auto_mission_missing;
+    boolean offboard_control_signal_lost;
+    boolean home_position_invalid;
+    boolean manual_control_signal_lost;
+    boolean gcs_connection_lost;
+    octet battery_warning;
+    boolean battery_low_remaining_time;
+    boolean battery_unhealthy;
+    boolean fd_critical_failure;
+    boolean fd_esc_arming_failure;
+    boolean fd_imbalanced_prop;
+    boolean fd_motor_failure;
+    boolean fd_alt_loss;
+    boolean geofence_breached;
+    boolean mission_failure;
+    boolean vtol_fixed_wing_system_failure;
+    boolean wind_limit_exceeded;
+    boolean flight_time_limit_exceeded;
+    boolean position_accuracy_low;
+    boolean navigator_failure;
+    boolean parachute_unhealthy;
+    boolean remote_id_unhealthy;
+    boolean gnss_lost;
+};
+
+}; // msg
+}; // px4_msgs

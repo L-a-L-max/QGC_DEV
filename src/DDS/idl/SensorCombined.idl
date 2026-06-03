@@ -1,0 +1,19 @@
+module px4_msgs {
+module msg {
+
+@topic
+struct SensorCombined {
+    unsigned long long timestamp;
+    float gyro_rad[3];
+    unsigned long gyro_integral_dt;
+    long accelerometer_timestamp_relative;
+    float accelerometer_m_s2[3];
+    unsigned long accelerometer_integral_dt;
+    octet accelerometer_clipping;
+    octet gyro_clipping;
+    octet accel_calibration_count;
+    octet gyro_calibration_count;
+};
+
+}; // msg
+}; // px4_msgs

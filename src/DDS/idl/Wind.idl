@@ -1,0 +1,19 @@
+module px4_msgs {
+module msg {
+
+@topic
+struct Wind {
+    unsigned long long timestamp;
+    unsigned long long timestamp_sample;
+    float windspeed_north;
+    float windspeed_east;
+    float variance_north;
+    float variance_east;
+    float tas_innov;
+    float tas_innov_var;
+    float beta_innov;
+    float beta_innov_var;
+};
+
+}; // msg
+}; // px4_msgs

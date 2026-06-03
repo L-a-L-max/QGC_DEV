@@ -1,0 +1,22 @@
+module px4_msgs {
+module msg {
+
+@topic
+struct VehicleLandDetected {
+    unsigned long long timestamp;
+    boolean freefall;
+    boolean ground_contact;
+    boolean maybe_landed;
+    boolean landed;
+    boolean in_ground_effect;
+    boolean in_descend;
+    boolean has_low_throttle;
+    boolean vertical_movement;
+    boolean horizontal_movement;
+    boolean rotational_movement;
+    boolean close_to_ground_or_skipped_check;
+    boolean at_rest;
+};
+
+}; // msg
+}; // px4_msgs

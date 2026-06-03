@@ -1,0 +1,74 @@
+module px4_msgs {
+module msg {
+
+@topic
+struct EstimatorStatusFlags {
+    unsigned long long timestamp;
+    unsigned long long timestamp_sample;
+    unsigned long control_status_changes;
+    boolean cs_tilt_align;
+    boolean cs_yaw_align;
+    boolean cs_gnss_pos;
+    boolean cs_opt_flow;
+    boolean cs_mag_hdg;
+    boolean cs_mag_3d;
+    boolean cs_mag_dec;
+    boolean cs_in_air;
+    boolean cs_wind;
+    boolean cs_baro_hgt;
+    boolean cs_rng_hgt;
+    boolean cs_gps_hgt;
+    boolean cs_ev_pos;
+    boolean cs_ev_yaw;
+    boolean cs_ev_hgt;
+    boolean cs_fuse_beta;
+    boolean cs_mag_field_disturbed;
+    boolean cs_fixed_wing;
+    boolean cs_mag_fault;
+    boolean cs_fuse_aspd;
+    boolean cs_gnd_effect;
+    boolean cs_rng_stuck;
+    boolean cs_gnss_yaw;
+    boolean cs_mag_aligned_in_flight;
+    boolean cs_ev_vel;
+    boolean cs_synthetic_mag_z;
+    boolean cs_vehicle_at_rest;
+    boolean cs_gnss_yaw_fault;
+    boolean cs_rng_fault;
+    boolean cs_inertial_dead_reckoning;
+    boolean cs_wind_dead_reckoning;
+    boolean cs_rng_kin_consistent;
+    boolean cs_fake_pos;
+    boolean cs_fake_hgt;
+    boolean cs_gravity_vector;
+    boolean cs_mag;
+    boolean cs_ev_yaw_fault;
+    boolean cs_mag_heading_consistent;
+    boolean cs_aux_gpos;
+    boolean cs_rng_terrain;
+    boolean cs_opt_flow_terrain;
+    boolean cs_valid_fake_pos;
+    boolean cs_constant_pos;
+    boolean cs_baro_fault;
+    boolean cs_gnss_vel;
+    boolean cs_gnss_fault;
+    boolean cs_yaw_manual;
+    boolean cs_gnss_hgt_fault;
+    boolean cs_in_transition;
+    boolean cs_heading_observable;
+    unsigned long fault_status_changes;
+    boolean fs_bad_mag_x;
+    boolean fs_bad_mag_y;
+    boolean fs_bad_mag_z;
+    boolean fs_bad_hdg;
+    boolean fs_bad_mag_decl;
+    boolean fs_bad_airspeed;
+    boolean fs_bad_sideslip;
+    boolean fs_bad_optflow_x;
+    boolean fs_bad_optflow_y;
+    boolean fs_bad_acc_vertical;
+    boolean fs_bad_acc_clipping;
+};
+
+}; // msg
+}; // px4_msgs

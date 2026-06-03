@@ -152,6 +152,7 @@ bool DDSMappingEngine::_parseTopic(const QJsonObject &topicObj)
 {
     DDSTopicMapping mapping;
     mapping.ddsTopicName = topicObj.value(QStringLiteral("dds_topic")).toString();
+    mapping.ddsTypeName = topicObj.value(QStringLiteral("dds_type")).toString();
     mapping.defaultFactGroup = topicObj.value(QStringLiteral("fact_group")).toString();
 
     if (mapping.ddsTopicName.isEmpty()) {

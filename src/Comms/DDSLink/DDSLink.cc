@@ -10,6 +10,7 @@ QGC_LOGGING_CATEGORY_ON(DDSLinkLog, "Comms.DDSLink")
 DDSLink::DDSLink(SharedLinkConfigurationPtr &config, QObject *parent)
     : LinkInterface(config, parent)
     , _dataInjector(&_mappingEngine, &_transformRegistry, this)
+    , _vehicleManager(this, this)
 {
     qCInfo(DDSLinkLog) << "DDSLink created";
 
@@ -85,6 +86,13 @@ void DDSLink::disconnect()
     }
 
     _pollTimer.stop();
+
+    // Delete readers explicitly before destroying participant
+    for (auto it = _readers.cbegin(); it != _readers.cend(); ++it) {
+        if (it.value().reader > 0) {
+            dds_delete(it.value().reader);
+        }
+    }
     _readers.clear();
 
     if (_participant > 0) {
@@ -111,6 +119,9 @@ void DDSLink::_onPollTimer()
     const quint64 now = static_cast<quint64>(QDateTime::currentMSecsSinceEpoch()) * 1000;
 
     for (auto it = _readers.cbegin(); it != _readers.cend(); ++it) {
+        if (it.value().reader <= 0) {
+            continue;  // skip topics without typed readers
+        }
         const QHash<QString, QVariant> sample = _readSample(it.value().reader, it.key());
         if (!sample.isEmpty()) {
             emit ddsMessageReceived(it.key(), sample, now);
@@ -149,30 +160,63 @@ void DDSLink::_destroyParticipant(dds_entity_t participant)
 
 void DDSLink::_subscribeToTopics(dds_entity_t participant, const QStringList &topicNames)
 {
-    Q_UNUSED(participant);
-
     const DDSConfiguration *config = _ddsConfig();
     const QString prefix = config ? config->namespacePrefix() : QString();
 
-    // Register topics for future subscription.
-    // Typed readers require IDL-generated type descriptors; until those are
-    // generated, we record the topic list so the mapping engine and
-    // data-injector pipeline can be validated end-to-end with injected data.
+    int typedCount = 0;
+    int stubCount = 0;
+
     for (const QString &topicName : topicNames) {
-        QString ddsTopicName = prefix.isEmpty()
-                                   ? QStringLiteral("rt") + topicName
-                                   : prefix + topicName;
+        // Build full DDS topic name: "rt" prefix + topic path
+        const QString ddsTopicName = prefix.isEmpty()
+                                       ? QStringLiteral("rt") + topicName
+                                       : prefix + topicName;
+
+        // Look up the type from the mapping table
+        const DDSTopicMapping *mapping = _mappingEngine.topicMapping(topicName);
+        const QString typeName = mapping ? mapping->ddsTypeName : QString();
+        const DDSTypeEntry *typeEntry = typeName.isEmpty() ? nullptr
+                                                           : _typeRegistry.typeEntry(typeName);
 
         ReaderInfo info;
-        info.reader = DDS_ENTITY_NIL;
-        _readers.insert(topicName, info);
 
-        qCDebug(DDSLinkLog) << "Registered topic:" << ddsTopicName
-                            << "(reader pending type support)";
+        if (typeEntry && typeEntry->descriptor) {
+            // Create a real DDS topic + reader with the IDL-generated type
+            const dds_entity_t topic = dds_create_topic(
+                participant, typeEntry->descriptor,
+                ddsTopicName.toUtf8().constData(), nullptr, nullptr);
+
+            if (topic < 0) {
+                qCWarning(DDSLinkLog) << "dds_create_topic failed for" << ddsTopicName
+                                      << ":" << dds_strretcode(-topic);
+                info.reader = DDS_ENTITY_NIL;
+            } else {
+                const dds_entity_t reader = dds_create_reader(
+                    participant, topic, nullptr, nullptr);
+
+                if (reader < 0) {
+                    qCWarning(DDSLinkLog) << "dds_create_reader failed for" << ddsTopicName
+                                          << ":" << dds_strretcode(-reader);
+                    info.reader = DDS_ENTITY_NIL;
+                } else {
+                    info.reader = reader;
+                    info.extractor = typeEntry->extractor;
+                    typedCount++;
+                    qCDebug(DDSLinkLog) << "Created typed reader for" << ddsTopicName;
+                }
+            }
+        } else {
+            // No IDL type available — register as stub for future support
+            info.reader = DDS_ENTITY_NIL;
+            stubCount++;
+            qCDebug(DDSLinkLog) << "No IDL type for" << ddsTopicName << "(stub)";
+        }
+
+        _readers.insert(topicName, info);
     }
 
-    qInfo() << "[DDSLink] Registered" << _readers.size() << "of"
-             << topicNames.size() << "topics (type support pending)";
+    qInfo() << "[DDSLink] Subscribed:" << typedCount << "typed readers,"
+             << stubCount << "stubs, of" << topicNames.size() << "topics";
 }
 
 QStringList DDSLink::_runDiscovery(dds_entity_t participant)
@@ -184,11 +228,29 @@ QStringList DDSLink::_runDiscovery(dds_entity_t participant)
 
 QHash<QString, QVariant> DDSLink::_readSample(dds_entity_t reader, const QString &topicName)
 {
-    Q_UNUSED(reader);
-    Q_UNUSED(topicName);
-    // Typed reading requires IDL-generated type descriptors.
-    // Will be implemented when PX4 IDL types are generated via idlc.
-    return {};
+    // Find the extractor for this topic
+    auto it = _readers.constFind(topicName);
+    if (it == _readers.constEnd() || !it.value().extractor) {
+        return {};
+    }
+
+    void *samples[1] = {nullptr};
+    dds_sample_info_t infos[1];
+
+    const dds_return_t rc = dds_take(reader, samples, infos, 1, 1);
+    if (rc <= 0 || !infos[0].valid_data || !samples[0]) {
+        if (samples[0]) {
+            // Return the loan
+            dds_return_loan(reader, samples, rc);
+        }
+        return {};
+    }
+
+    // Extract fields using the type-specific extractor
+    QHash<QString, QVariant> result = it.value().extractor(samples[0]);
+
+    dds_return_loan(reader, samples, rc);
+    return result;
 }
 
 #endif // QGC_ENABLE_DDS

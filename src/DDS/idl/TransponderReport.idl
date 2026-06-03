@@ -1,0 +1,24 @@
+module px4_msgs {
+module msg {
+
+@topic
+struct TransponderReport {
+    unsigned long long timestamp;
+    unsigned long icao_address;
+    double lat;
+    double lon;
+    octet altitude_type;
+    float altitude;
+    float heading;
+    float hor_velocity;
+    float ver_velocity;
+    char callsign[9];
+    octet emitter_type;
+    octet tslc;
+    unsigned short flags;
+    unsigned short squawk;
+    octet uas_id[18];
+};
+
+}; // msg
+}; // px4_msgs

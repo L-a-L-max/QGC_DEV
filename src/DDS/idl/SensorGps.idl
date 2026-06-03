@@ -1,0 +1,49 @@
+module px4_msgs {
+module msg {
+
+@topic
+struct SensorGps {
+    unsigned long long timestamp;
+    unsigned long long timestamp_sample;
+    unsigned long device_id;
+    double latitude_deg;
+    double longitude_deg;
+    double altitude_msl_m;
+    double altitude_ellipsoid_m;
+    float s_variance_m_s;
+    float c_variance_rad;
+    octet fix_type;
+    float eph;
+    float epv;
+    float hdop;
+    float vdop;
+    long noise_per_ms;
+    unsigned short automatic_gain_control;
+    octet jamming_state;
+    long jamming_indicator;
+    octet spoofing_state;
+    octet authentication_state;
+    float vel_m_s;
+    float vel_n_m_s;
+    float vel_e_m_s;
+    float vel_d_m_s;
+    float cog_rad;
+    boolean vel_ned_valid;
+    long timestamp_time_relative;
+    unsigned long long time_utc_usec;
+    octet satellites_used;
+    unsigned long system_error;
+    float heading;
+    float heading_offset;
+    float heading_accuracy;
+    float rtcm_injection_rate;
+    octet selected_rtcm_instance;
+    boolean rtcm_crc_failed;
+    octet rtcm_msg_used;
+    float antenna_offset_x;
+    float antenna_offset_y;
+    float antenna_offset_z;
+};
+
+}; // msg
+}; // px4_msgs

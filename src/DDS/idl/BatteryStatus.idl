@@ -1,0 +1,47 @@
+module px4_msgs {
+module msg {
+
+@topic
+struct BatteryStatus {
+    unsigned long long timestamp;
+    boolean connected;
+    float voltage_v;
+    float current_a;
+    float current_average_a;
+    float discharged_mah;
+    float remaining;
+    float scale;
+    float time_remaining_s;
+    float temperature;
+    octet cell_count;
+    octet source;
+    octet priority;
+    unsigned short capacity;
+    unsigned short cycle_count;
+    unsigned short average_time_to_empty;
+    unsigned short manufacture_date;
+    unsigned short state_of_health;
+    unsigned short max_error;
+    octet id;
+    unsigned short interface_error;
+    float voltage_cell_v[14];
+    float max_cell_voltage_delta;
+    boolean is_powering_off;
+    boolean is_required;
+    octet warning;
+    unsigned short faults;
+    float full_charge_capacity_wh;
+    float remaining_capacity_wh;
+    unsigned short over_discharge_count;
+    float nominal_voltage;
+    float internal_resistance_estimate;
+    float ocv_estimate;
+    float ocv_estimate_filtered;
+    float volt_based_soc_estimate;
+    float voltage_prediction;
+    float prediction_error;
+    float estimation_covariance_norm;
+};
+
+}; // msg
+}; // px4_msgs
