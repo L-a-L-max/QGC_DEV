@@ -94,7 +94,7 @@ if(QGC_ENABLE_DDS)
         set(gen_h "${DDS_IDL_GEN_DIR}/${idl_name}.h")
         add_custom_command(
             OUTPUT ${gen_c} ${gen_h}
-            COMMAND ${IDLC_EXECUTABLE} -l c -o ${DDS_IDL_GEN_DIR} ${idl_file}
+            COMMAND ${IDLC_EXECUTABLE} -l c -t -o ${DDS_IDL_GEN_DIR} ${idl_file}
             DEPENDS ${idl_file}
             COMMENT "idlc: Generating ${idl_name}.h/.c from ${idl_name}.idl"
         )

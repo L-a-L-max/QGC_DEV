@@ -183,6 +183,31 @@ void DDSLink::_onPollTimer()
 
 dds_entity_t DDSLink::_createParticipant(int domainId)
 {
+    // Create a CycloneDDS domain with permissive type-checking config.
+    // PX4 MicroXRCE-DDS Agent uses FastDDS; the XTypes TypeObject hashes
+    // will never match our idlc-generated descriptors. Disabling type
+    // information forces endpoint matching by type-name only.
+    static const char *cycloneConfig =
+        "<CycloneDDS>"
+        "  <Domain id=\"any\">"
+        "    <Compatibility>"
+        "      <AssumeRtiHasTopicDiscovery>best-effort</AssumeRtiHasTopicDiscovery>"
+        "    </Compatibility>"
+        "    <Tracing>"
+        "      <Category>discovery</Category>"
+        "      <OutputFile>stderr</OutputFile>"
+        "      <Verbosity>warning</Verbosity>"
+        "    </Tracing>"
+        "  </Domain>"
+        "</CycloneDDS>";
+
+    const dds_entity_t domain = dds_create_domain(
+        static_cast<dds_domainid_t>(domainId), cycloneConfig);
+    if (domain < 0) {
+        qCWarning(DDSLinkLog) << "dds_create_domain failed:" << dds_strretcode(-domain)
+                              << "— falling back to default domain";
+    }
+
     const dds_entity_t participant = dds_create_participant(
         static_cast<dds_domainid_t>(domainId), nullptr, nullptr);
 
@@ -249,11 +274,11 @@ void DDSLink::_subscribeToTopics(dds_entity_t participant, const QStringList &to
             continue;
         }
 
-        // PX4 MicroXRCE-DDS Agent publishes with BEST_EFFORT reliability.
-        // A RELIABLE reader (CycloneDDS default) cannot receive data from a
-        // BEST_EFFORT writer. We must match the publisher's QoS.
+        // PX4 MicroXRCE-DDS Agent publishes with BEST_EFFORT reliability and
+        // TRANSIENT_LOCAL durability. Match both to ensure QoS compatibility.
         dds_qos_t *qos = dds_create_qos();
         dds_qset_reliability(qos, DDS_RELIABILITY_BEST_EFFORT, 0);
+        dds_qset_durability(qos, DDS_DURABILITY_TRANSIENT_LOCAL);
         dds_qset_history(qos, DDS_HISTORY_KEEP_LAST, 1);
 
         const dds_entity_t reader = dds_create_reader(participant, topic, qos, nullptr);
