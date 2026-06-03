@@ -13,6 +13,7 @@
 #include <dds/dds.h>
 
 #include <QtCore/QHash>
+#include <QtCore/QSet>
 #include <QtCore/QTimer>
 #include <QtQmlIntegration/QtQmlIntegration>
 
@@ -74,6 +75,7 @@ private:
     };
 
     QHash<QString, ReaderInfo> _readers;
+    QSet<QString>              _receivedTopics;  ///< tracks first-sample logging per topic
 };
 
 #endif // QGC_ENABLE_DDS

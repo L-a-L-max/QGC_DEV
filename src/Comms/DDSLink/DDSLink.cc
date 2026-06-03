@@ -94,6 +94,7 @@ void DDSLink::disconnect()
         }
     }
     _readers.clear();
+    _receivedTopics.clear();
 
     if (_participant > 0) {
         _destroyParticipant(_participant);
@@ -124,6 +125,11 @@ void DDSLink::_onPollTimer()
         }
         const QHash<QString, QVariant> sample = _readSample(it.value().reader, it.key());
         if (!sample.isEmpty()) {
+            if (!_receivedTopics.contains(it.key())) {
+                _receivedTopics.insert(it.key());
+                qInfo() << "[DDSLink] First data received from" << it.key()
+                         << "fields:" << sample.size();
+            }
             emit ddsMessageReceived(it.key(), sample, now);
         }
     }
@@ -201,7 +207,15 @@ void DDSLink::_subscribeToTopics(dds_entity_t participant, const QStringList &to
             continue;
         }
 
-        const dds_entity_t reader = dds_create_reader(participant, topic, nullptr, nullptr);
+        // PX4 MicroXRCE-DDS Agent publishes with BEST_EFFORT reliability.
+        // A RELIABLE reader (CycloneDDS default) cannot receive data from a
+        // BEST_EFFORT writer. We must match the publisher's QoS.
+        dds_qos_t *qos = dds_create_qos();
+        dds_qset_reliability(qos, DDS_RELIABILITY_BEST_EFFORT, 0);
+        dds_qset_history(qos, DDS_HISTORY_KEEP_LAST, 1);
+
+        const dds_entity_t reader = dds_create_reader(participant, topic, qos, nullptr);
+        dds_delete_qos(qos);
 
         if (reader < 0) {
             qCWarning(DDSLinkLog) << "dds_create_reader failed for" << ddsTopicName
