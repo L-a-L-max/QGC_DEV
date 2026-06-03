@@ -1,6 +1,6 @@
 # FindCycloneDDS.cmake
 #
-# Find the Eclipse Cyclone DDS library.
+# Find the Eclipse Cyclone DDS library (libddsc).
 #
 # Sets:
 #   CycloneDDS_FOUND       - TRUE if CycloneDDS is found
@@ -12,25 +12,19 @@
 #   CycloneDDS::ddsc       - The CycloneDDS C library
 #
 # Supports:
-#   1. CycloneDDS CMake config (CycloneDDSConfig.cmake)
-#   2. pkg-config (cyclonedds)
-#   3. Manual search in common install paths
-#   4. CYCLONEDDS_HOME / CYCLONEDDS_ROOT environment hints
+#   1. pkg-config (cyclonedds)
+#   2. Manual search in common install paths
+#   3. CYCLONEDDS_HOME env / CYCLONEDDS_ROOT cmake variable hints
+#
+# NOTE: We intentionally do NOT use find_package(CycloneDDS CONFIG) because
+# some CycloneDDS installations provide a CycloneDDSConfig.cmake that sets
+# CycloneDDS_FOUND but creates IMPORTED targets whose scope does not survive
+# CMake's generate phase when invoked from a Find module (observed with
+# CMake 4.x). By always locating the library and headers ourselves and
+# creating a GLOBAL IMPORTED target, we guarantee the target is available
+# everywhere in the project.
 
-# ── Strategy 1: Try the CMake config (CycloneDDS ships CycloneDDSConfig.cmake)
-find_package(CycloneDDS CONFIG QUIET)
-if(CycloneDDS_FOUND AND TARGET CycloneDDS::ddsc)
-    message(STATUS "Found CycloneDDS via CMake config: ${CycloneDDS_VERSION}")
-    return()
-endif()
-
-if(CycloneDDS_FOUND AND NOT TARGET CycloneDDS::ddsc)
-    message(STATUS "CycloneDDS CMake config found (${CycloneDDS_VERSION}) "
-                   "but CycloneDDS::ddsc target missing — falling back to manual search")
-    set(CycloneDDS_FOUND FALSE)
-endif()
-
-# ── Strategy 2: Try pkg-config
+# ── Strategy 1: Try pkg-config for path hints
 find_package(PkgConfig QUIET)
 if(PkgConfig_FOUND)
     pkg_check_modules(_CDDS QUIET cyclonedds)
@@ -43,6 +37,35 @@ if(PkgConfig_FOUND)
         if(NOT CycloneDDS_VERSION)
             set(CycloneDDS_VERSION "${_CDDS_VERSION}")
         endif()
+    endif()
+endif()
+
+# ── Strategy 2: Try CycloneDDS's own cmake config just for path extraction
+#    (don't rely on its targets — we create our own below)
+if(NOT CycloneDDS_INCLUDE_DIR OR NOT CycloneDDS_LIBRARY)
+    find_package(CycloneDDS CONFIG QUIET)
+    if(CycloneDDS_FOUND)
+        # Extract paths from the config-created target if it exists
+        if(TARGET CycloneDDS::ddsc)
+            get_target_property(_cdds_loc CycloneDDS::ddsc IMPORTED_LOCATION)
+            get_target_property(_cdds_inc CycloneDDS::ddsc INTERFACE_INCLUDE_DIRECTORIES)
+            if(NOT _cdds_loc)
+                # Try per-configuration location
+                get_target_property(_cdds_loc CycloneDDS::ddsc IMPORTED_LOCATION_RELEASE)
+            endif()
+            if(NOT _cdds_loc)
+                get_target_property(_cdds_loc CycloneDDS::ddsc IMPORTED_LOCATION_NOCONFIG)
+            endif()
+            if(_cdds_loc AND NOT CycloneDDS_LIBRARY)
+                set(CycloneDDS_LIBRARY "${_cdds_loc}" CACHE FILEPATH "CycloneDDS library")
+            endif()
+            if(_cdds_inc AND NOT CycloneDDS_INCLUDE_DIR)
+                list(GET _cdds_inc 0 _first_inc)
+                set(CycloneDDS_INCLUDE_DIR "${_first_inc}" CACHE PATH "CycloneDDS include dir")
+            endif()
+        endif()
+        # Reset FOUND so our own find_package_handle_standard_args decides
+        set(CycloneDDS_FOUND FALSE)
     endif()
 endif()
 
@@ -91,8 +114,9 @@ if(CycloneDDS_FOUND)
     set(CycloneDDS_LIBRARIES ${CycloneDDS_LIBRARY})
     set(CycloneDDS_INCLUDE_DIRS ${CycloneDDS_INCLUDE_DIR})
 
+    # Always create our own GLOBAL imported target to avoid scope issues
     if(NOT TARGET CycloneDDS::ddsc)
-        add_library(CycloneDDS::ddsc UNKNOWN IMPORTED)
+        add_library(CycloneDDS::ddsc UNKNOWN IMPORTED GLOBAL)
         set_target_properties(CycloneDDS::ddsc PROPERTIES
             IMPORTED_LOCATION "${CycloneDDS_LIBRARY}"
             INTERFACE_INCLUDE_DIRECTORIES "${CycloneDDS_INCLUDE_DIR}"
