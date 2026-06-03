@@ -72,7 +72,9 @@ add_subdirectory(Bluetooth)
 # DDS Communication (optional, requires CycloneDDS)
 # ----------------------------------------------------------------------------
 if(QGC_ENABLE_DDS)
-    # Find CycloneDDS
+    # Find CycloneDDS — supports CMake config, pkg-config, and manual search.
+    # If CycloneDDS is in a custom location, pass -DCYCLONEDDS_ROOT=/path/to/cyclonedds
+    # or set CYCLONEDDS_HOME environment variable.
     list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
     find_package(CycloneDDS REQUIRED)
 
