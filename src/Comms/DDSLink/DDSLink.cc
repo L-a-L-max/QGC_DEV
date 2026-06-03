@@ -5,13 +5,13 @@
 
 #include <QtCore/QDateTime>
 
-QGC_LOGGING_CATEGORY(DDSLinkLog, "Comms.DDSLink")
+QGC_LOGGING_CATEGORY_ON(DDSLinkLog, "Comms.DDSLink")
 
 DDSLink::DDSLink(SharedLinkConfigurationPtr &config, QObject *parent)
     : LinkInterface(config, parent)
     , _dataInjector(&_mappingEngine, &_transformRegistry, this)
 {
-    qCDebug(DDSLinkLog) << "DDSLink created";
+    qCInfo(DDSLinkLog) << "DDSLink created";
 
     _pollTimer.setInterval(10);
     (void) connect(&_pollTimer, &QTimer::timeout, this, &DDSLink::_onPollTimer);
@@ -51,9 +51,9 @@ bool DDSLink::_connect()
         return false;
     }
 
-    qCInfo(DDSLinkLog) << "Loaded mapping:" << mappingName
-                       << "topics:" << _mappingEngine.topicCount()
-                       << "fields:" << _mappingEngine.fieldCount();
+    qInfo() << "[DDSLink] Loaded mapping:" << mappingName
+             << "topics:" << _mappingEngine.topicCount()
+             << "fields:" << _mappingEngine.fieldCount();
 
     _participant = _createParticipant(config->domainId());
     if (_participant < 0) {
@@ -73,7 +73,7 @@ bool DDSLink::_connect()
     _pollTimer.start();
 
     _connected = true;
-    qCInfo(DDSLinkLog) << "DDS link connected on domain" << config->domainId();
+    qInfo() << "[DDSLink] DDS link connected on domain" << config->domainId();
     emit connected();
     return true;
 }
@@ -94,7 +94,7 @@ void DDSLink::disconnect()
 
     _connected = false;
     emit disconnected();
-    qCInfo(DDSLinkLog) << "DDS link disconnected";
+    qInfo() << "[DDSLink] DDS link disconnected";
 }
 
 void DDSLink::_writeBytes(const QByteArray &bytes)
@@ -132,8 +132,8 @@ dds_entity_t DDSLink::_createParticipant(int domainId)
         return participant;
     }
 
-    qCInfo(DDSLinkLog) << "Created DDS participant on domain" << domainId
-                       << "entity:" << participant;
+    qInfo() << "[DDSLink] Created DDS participant on domain" << domainId
+             << "entity:" << participant;
     return participant;
 }
 
@@ -171,8 +171,8 @@ void DDSLink::_subscribeToTopics(dds_entity_t participant, const QStringList &to
                             << "(reader pending type support)";
     }
 
-    qCInfo(DDSLinkLog) << "Registered" << _readers.size() << "of"
-                       << topicNames.size() << "topics (type support pending)";
+    qInfo() << "[DDSLink] Registered" << _readers.size() << "of"
+             << topicNames.size() << "topics (type support pending)";
 }
 
 QStringList DDSLink::_runDiscovery(dds_entity_t participant)
