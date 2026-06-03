@@ -4,6 +4,7 @@
 #include "QGCLoggingCategory.h"
 
 #include <QtCore/QDateTime>
+#include <QtCore/QRegularExpression>
 
 QGC_LOGGING_CATEGORY_ON(DDSLinkLog, "Comms.DDSLink")
 
@@ -118,13 +119,20 @@ void DDSLink::_onPollTimer()
 
     const quint64 now = static_cast<quint64>(QDateTime::currentMSecsSinceEpoch()) * 1000;
 
+    static const QRegularExpression versionSuffix(QStringLiteral("_v\\d+$"));
+
     for (auto it = _readers.cbegin(); it != _readers.cend(); ++it) {
         if (it.value().reader <= 0) {
-            continue;  // skip topics without typed readers
+            continue;
         }
         const QHash<QString, QVariant> sample = _readSample(it.value().reader, it.key());
         if (!sample.isEmpty()) {
-            emit ddsMessageReceived(it.key(), sample, now);
+            // Strip _v1 suffix from key so downstream gets the canonical topic name
+            QString emitKey = it.key();
+            if (emitKey.contains(versionSuffix)) {
+                emitKey = emitKey.left(emitKey.lastIndexOf(QStringLiteral("_v")));
+            }
+            emit ddsMessageReceived(emitKey, sample, now);
         }
     }
 }
@@ -162,57 +170,77 @@ void DDSLink::_subscribeToTopics(dds_entity_t participant, const QStringList &to
 {
     const DDSConfiguration *config = _ddsConfig();
     const QString prefix = config ? config->namespacePrefix() : QString();
+    const QString rtPrefix = prefix.isEmpty() ? QStringLiteral("rt") : prefix;
+
+    // PX4 v1.17+ appends _v1 to some topics. Create readers for both the
+    // canonical name and the _v1 variant so we receive data regardless of
+    // PX4 version.
+    static const QStringList v1Topics = {
+        QStringLiteral("/fmu/out/airspeed_validated"),
+        QStringLiteral("/fmu/out/battery_status"),
+        QStringLiteral("/fmu/out/home_position"),
+        QStringLiteral("/fmu/out/vehicle_local_position"),
+        QStringLiteral("/fmu/out/vehicle_status"),
+    };
 
     int typedCount = 0;
     int stubCount = 0;
 
-    for (const QString &topicName : topicNames) {
-        // Build full DDS topic name: "rt" prefix + topic path
-        const QString ddsTopicName = prefix.isEmpty()
-                                       ? QStringLiteral("rt") + topicName
-                                       : prefix + topicName;
+    auto createReader = [&](const QString &ddsTopicName,
+                            const dds_topic_descriptor_t *desc,
+                            const DDSFieldExtractorFunc &extractor,
+                            const QString &mapKey) -> bool {
+        const dds_entity_t topic = dds_create_topic(
+            participant, desc,
+            ddsTopicName.toUtf8().constData(), nullptr, nullptr);
+        if (topic < 0) {
+            qCDebug(DDSLinkLog) << "dds_create_topic failed:" << ddsTopicName
+                                << dds_strretcode(-topic);
+            return false;
+        }
+        const dds_entity_t reader = dds_create_reader(participant, topic, nullptr, nullptr);
+        if (reader < 0) {
+            qCDebug(DDSLinkLog) << "dds_create_reader failed:" << ddsTopicName
+                                << dds_strretcode(-reader);
+            return false;
+        }
+        ReaderInfo info;
+        info.reader = reader;
+        info.extractor = extractor;
+        _readers.insert(mapKey, info);
+        typedCount++;
+        qInfo() << "[DDSLink] Created typed reader for" << ddsTopicName;
+        return true;
+    };
 
-        // Look up the type from the mapping table
+    for (const QString &topicName : topicNames) {
         const DDSTopicMapping *mapping = _mappingEngine.topicMapping(topicName);
         const QString typeName = mapping ? mapping->ddsTypeName : QString();
         const DDSTypeEntry *typeEntry = typeName.isEmpty() ? nullptr
                                                            : _typeRegistry.typeEntry(typeName);
 
-        ReaderInfo info;
-
-        if (typeEntry && typeEntry->descriptor) {
-            // Create a real DDS topic + reader with the IDL-generated type
-            const dds_entity_t topic = dds_create_topic(
-                participant, typeEntry->descriptor,
-                ddsTopicName.toUtf8().constData(), nullptr, nullptr);
-
-            if (topic < 0) {
-                qCWarning(DDSLinkLog) << "dds_create_topic failed for" << ddsTopicName
-                                      << ":" << dds_strretcode(-topic);
-                info.reader = DDS_ENTITY_NIL;
-            } else {
-                const dds_entity_t reader = dds_create_reader(
-                    participant, topic, nullptr, nullptr);
-
-                if (reader < 0) {
-                    qCWarning(DDSLinkLog) << "dds_create_reader failed for" << ddsTopicName
-                                          << ":" << dds_strretcode(-reader);
-                    info.reader = DDS_ENTITY_NIL;
-                } else {
-                    info.reader = reader;
-                    info.extractor = typeEntry->extractor;
-                    typedCount++;
-                    qCDebug(DDSLinkLog) << "Created typed reader for" << ddsTopicName;
-                }
-            }
-        } else {
-            // No IDL type available — register as stub for future support
+        if (!typeEntry || !typeEntry->descriptor) {
+            ReaderInfo info;
             info.reader = DDS_ENTITY_NIL;
+            _readers.insert(topicName, info);
             stubCount++;
-            qCDebug(DDSLinkLog) << "No IDL type for" << ddsTopicName << "(stub)";
+            qCDebug(DDSLinkLog) << "No IDL type for" << topicName << "(stub)";
+            continue;
         }
 
-        _readers.insert(topicName, info);
+        const QString baseDds = rtPrefix + topicName;
+
+        // Create reader for the canonical name
+        createReader(baseDds, typeEntry->descriptor, typeEntry->extractor, topicName);
+
+        // For known _v1 topics, also create a reader for the versioned name.
+        // Both readers map back to the same internal topicName via separate keys
+        // so _onPollTimer picks up data from whichever name PX4 actually uses.
+        if (v1Topics.contains(topicName)) {
+            const QString v1Dds = baseDds + QStringLiteral("_v1");
+            const QString v1Key = topicName + QStringLiteral("_v1");
+            createReader(v1Dds, typeEntry->descriptor, typeEntry->extractor, v1Key);
+        }
     }
 
     qInfo() << "[DDSLink] Subscribed:" << typedCount << "typed readers,"
