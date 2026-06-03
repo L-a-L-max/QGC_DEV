@@ -8,6 +8,7 @@
 #include <QtCore/QFile>
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonDocument>
+#include <QtCore/QRegularExpression>
 #include <QtCore/QStandardPaths>
 
 DDSMappingEngine::DDSMappingEngine(QObject *parent)
@@ -108,12 +109,25 @@ const DDSTopicMapping *DDSMappingEngine::topicMapping(const QString &ddsTopicNam
     }
 
     // Try without namespace prefix (strip everything before the last /fmu/)
-    const int fmuIdx = ddsTopicName.lastIndexOf(QStringLiteral("/fmu/"));
+    QString candidate = ddsTopicName;
+    const int fmuIdx = candidate.lastIndexOf(QStringLiteral("/fmu/"));
     if (fmuIdx > 0) {
-        const QString stripped = ddsTopicName.mid(fmuIdx);
-        auto it2 = _topicMap.constFind(stripped);
+        candidate = candidate.mid(fmuIdx);
+        auto it2 = _topicMap.constFind(candidate);
         if (it2 != _topicMap.constEnd()) {
             return &it2.value();
+        }
+    }
+
+    // Try stripping PX4 version suffix (_v1, _v2, etc.)
+    static const QRegularExpression versionSuffix(QStringLiteral("_v\\d+$"));
+    const QString stripped = candidate.contains(versionSuffix)
+                                 ? candidate.left(candidate.lastIndexOf(QStringLiteral("_v")))
+                                 : QString();
+    if (!stripped.isEmpty()) {
+        auto it3 = _topicMap.constFind(stripped);
+        if (it3 != _topicMap.constEnd()) {
+            return &it3.value();
         }
     }
 
