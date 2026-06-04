@@ -90,7 +90,7 @@ PX4 → uORB → MicroXRCE-DDS Agent → CycloneDDS → UDP Multicast
 | `mgrs` | GPS 面板 | QGC 计算（从 lat/lon） | — | ❌ 未实现 |
 | `hdop` | 工具栏 GPS 指示器 | GPS_RAW_INT (eph/100) | vehicle_gps_position (hdop) | ✅ 已实现 |
 | `vdop` | GPS 面板 | GPS_RAW_INT (epv/100) | vehicle_gps_position (vdop) | ✅ 已实现 |
-| `courseOverGround` | GPS 面板 | GPS_RAW_INT (cog/100) | — | ❌ 未提取 |
+| `courseOverGround` | GPS 面板 | GPS_RAW_INT (cog/100) | vehicle_gps_position (cog_rad→deg) | ✅ 已实现 |
 | `yaw` | GPS 面板 | GPS_RAW_INT (yaw/100) | — | ❌ 未提取 |
 | `count` | 工具栏 GPS 指示器 | GPS_RAW_INT (satellites_visible) | vehicle_gps_position (satellites_used) | ✅ 已实现 |
 | `lock` | GPS 面板 | GPS_RAW_INT (fix_type) | vehicle_gps_position (fix_type) | ✅ 已实现 |

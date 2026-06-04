@@ -145,6 +145,12 @@
           "dds_field": "fix_type",
           "fact_name": "lock",
           "description": "GPS fix type (0=no fix, 2=2D, 3=3D, 4=DGPS, 5=RTK float, 6=RTK fixed)"
+        },
+        {
+          "dds_field": "cog_rad",
+          "fact_name": "courseOverGround",
+          "transform": "rad_to_deg",
+          "description": "Course over ground (direction of movement) in degrees"
         }
       ]
     },
