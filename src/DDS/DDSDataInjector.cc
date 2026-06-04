@@ -7,6 +7,7 @@
 #include "Fact.h"
 #include "FactGroup.h"
 #include "QmlObjectListModel.h"
+#include "BatteryFactGroupListModel.h"
 
 #include <QtCore/QDebug>
 #include <QtPositioning/QGeoCoordinate>
@@ -46,6 +47,12 @@ void DDSDataInjector::onDDSMessage(const QString &topicName,
     }
     if (topicName.contains(QLatin1String("vehicle_status"))) {
         _updateVehicleState(fields);
+    }
+    if (topicName.contains(QLatin1String("home_position"))) {
+        _updateHomePosition(fields);
+    }
+    if (topicName.contains(QLatin1String("battery_status"))) {
+        _ensureBatteryExists();
     }
 
     const DDSTopicMapping *mapping = _mappingEngine->topicMapping(topicName);
@@ -136,7 +143,6 @@ FactGroup *DDSDataInjector::_resolveFactGroup(const QString &path) const
         return _vehicle->distanceSensorFactGroup();
     }
     if (path == QLatin1String("battery")) {
-        // Battery is a list model; use the first battery (id=0) if it exists
         QmlObjectListModel *batteries = _vehicle->batteries();
         if (batteries && batteries->count() > 0) {
             return qobject_cast<FactGroup *>(batteries->get(0));
@@ -202,16 +208,60 @@ void DDSDataInjector::_updateVehicleCoordinate(const QHash<QString, QVariant> &f
 
 void DDSDataInjector::_updateVehicleState(const QHash<QString, QVariant> &fields)
 {
-    // Update armed state from vehicle_status.arming_state
-    // PX4: arming_state 2 = ARMED, 1 = STANDBY/DISARMED
     const auto armIt = fields.constFind(QStringLiteral("arming_state"));
     if (armIt != fields.constEnd()) {
-        const int armingState = armIt->toInt();
-        const bool armed = (armingState == 2);
-        if (armed != _vehicle->armed()) {
-            _vehicle->setArmed(armed, false);
-        }
+        _armingState = armIt->toInt();
     }
+
+    const auto navIt = fields.constFind(QStringLiteral("nav_state"));
+    if (navIt != fields.constEnd()) {
+        _navState = navIt->toInt();
+    }
+}
+
+void DDSDataInjector::_updateHomePosition(const QHash<QString, QVariant> &fields)
+{
+    const auto latIt = fields.constFind(QStringLiteral("lat"));
+    const auto lonIt = fields.constFind(QStringLiteral("lon"));
+    const auto altIt = fields.constFind(QStringLiteral("alt"));
+
+    if (latIt == fields.constEnd() || lonIt == fields.constEnd()) {
+        return;
+    }
+
+    bool latOk = false, lonOk = false;
+    const double lat = latIt->toDouble(&latOk);
+    const double lon = lonIt->toDouble(&lonOk);
+    if (!latOk || !lonOk || (lat == 0.0 && lon == 0.0)) {
+        return;
+    }
+
+    double alt = 0.0;
+    if (altIt != fields.constEnd()) {
+        alt = altIt->toDouble();
+    }
+
+    QGeoCoordinate homeCoord(lat, lon, alt);
+    if (homeCoord.isValid()) {
+        _vehicle->_setHomePosition(homeCoord);
+    }
+}
+
+void DDSDataInjector::_ensureBatteryExists()
+{
+    if (_batteryCreated) {
+        return;
+    }
+
+    QmlObjectListModel *batteries = _vehicle->batteries();
+    if (!batteries || batteries->count() > 0) {
+        _batteryCreated = true;
+        return;
+    }
+
+    auto *battery = new BatteryFactGroup(0, batteries);
+    batteries->append(battery);
+    _batteryCreated = true;
 }
 
 #endif // QGC_ENABLE_DDS

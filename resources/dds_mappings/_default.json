@@ -282,7 +282,14 @@
       "dds_topic": "/fmu/out/vehicle_status_v1",
       "dds_type": "px4_msgs::msg::dds_::VehicleStatus_",
       "fact_group": "_internal",
-      "description": "Vehicle status — handled directly by DDSDataInjector (armed state). No Fact injection.",
+      "description": "Vehicle status — handled directly by DDSDataInjector (armed state, nav_state). No Fact injection.",
+      "fields": []
+    },
+    {
+      "dds_topic": "/fmu/out/home_position_v1",
+      "dds_type": "px4_msgs::msg::dds_::HomePosition_",
+      "fact_group": "_internal",
+      "description": "Home position — handled directly by DDSDataInjector to set Vehicle home coordinate for distanceToHome.",
       "fields": []
     }
   ]

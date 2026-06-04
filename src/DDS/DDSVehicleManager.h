@@ -41,6 +41,7 @@ public slots:
 private:
     void _createVehicle(int vehicleType);
     void _emitSyntheticHeartbeat();
+    static uint32_t _navStateToCustomMode(int navState);
 
     DDSLink *_link = nullptr;
     bool     _vehicleCreated = false;

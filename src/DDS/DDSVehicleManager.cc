@@ -7,6 +7,7 @@
 #include "MAVLinkProtocol.h"
 #include "MultiVehicleManager.h"
 #include "Vehicle.h"
+#include "FirmwarePlugin/PX4/px4_custom_mode.h"
 
 #include <QtCore/QDebug>
 #include <QtCore/QTimer>
@@ -118,19 +119,58 @@ void DDSVehicleManager::_emitSyntheticHeartbeat()
         return;
     }
 
+    DDSDataInjector *injector = _link->dataInjector();
+
+    // Build base_mode: always custom mode enabled, add armed flag
+    uint8_t baseMode = MAV_MODE_FLAG_CUSTOM_MODE_ENABLED;
+    if (injector->armingState() == 2) {
+        baseMode |= MAV_MODE_FLAG_SAFETY_ARMED;
+    }
+
+    // Convert PX4 nav_state to custom_mode for flight mode display
+    uint32_t customMode = _navStateToCustomMode(injector->navState());
+
     mavlink_message_t msg{};
     mavlink_msg_heartbeat_pack_chan(
         static_cast<uint8_t>(_vehicleId),
         MAV_COMP_ID_AUTOPILOT1,
-        0,  // channel (unused for our purpose)
+        0,
         &msg,
         static_cast<uint8_t>(_mavType),
         MAV_AUTOPILOT_PX4,
-        MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
-        0,  // custom_mode
+        baseMode,
+        customMode,
         MAV_STATE_ACTIVE);
 
     emit MAVLinkProtocol::instance()->messageReceived(_link, msg);
+}
+
+uint32_t DDSVehicleManager::_navStateToCustomMode(int navState)
+{
+    union px4_custom_mode cm{};
+    cm.data = 0;
+
+    switch (navState) {
+    case 0:  cm.main_mode = PX4_CUSTOM_MAIN_MODE_MANUAL;     break;
+    case 1:  cm.main_mode = PX4_CUSTOM_MAIN_MODE_ALTCTL;     break;
+    case 2:  cm.main_mode = PX4_CUSTOM_MAIN_MODE_POSCTL;     break;
+    case 3:  cm.main_mode = PX4_CUSTOM_MAIN_MODE_AUTO;
+             cm.sub_mode  = PX4_CUSTOM_SUB_MODE_AUTO_MISSION; break;
+    case 4:  cm.main_mode = PX4_CUSTOM_MAIN_MODE_AUTO;
+             cm.sub_mode  = PX4_CUSTOM_SUB_MODE_AUTO_LOITER;  break;
+    case 5:  cm.main_mode = PX4_CUSTOM_MAIN_MODE_AUTO;
+             cm.sub_mode  = PX4_CUSTOM_SUB_MODE_AUTO_RTL;     break;
+    case 13: cm.main_mode = PX4_CUSTOM_MAIN_MODE_ACRO;       break;
+    case 14: cm.main_mode = PX4_CUSTOM_MAIN_MODE_OFFBOARD;   break;
+    case 15: cm.main_mode = PX4_CUSTOM_MAIN_MODE_STABILIZED; break;
+    case 17: cm.main_mode = PX4_CUSTOM_MAIN_MODE_AUTO;
+             cm.sub_mode  = PX4_CUSTOM_SUB_MODE_AUTO_TAKEOFF; break;
+    case 18: cm.main_mode = PX4_CUSTOM_MAIN_MODE_AUTO;
+             cm.sub_mode  = PX4_CUSTOM_SUB_MODE_AUTO_LAND;    break;
+    default: cm.main_mode = PX4_CUSTOM_MAIN_MODE_POSCTL;     break;
+    }
+
+    return cm.data;
 }
 
 #endif // QGC_ENABLE_DDS

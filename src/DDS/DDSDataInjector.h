@@ -10,6 +10,7 @@
 class DDSMappingEngine;
 class DDSTransformRegistry;
 class FactGroup;
+class BatteryFactGroup;
 class Vehicle;
 
 /// @file DDSDataInjector.h
@@ -47,6 +48,12 @@ public:
     /// Statistics: total unmapped topics/fields skipped.
     quint64 unmappedSkipped() const { return _unmappedSkipped; }
 
+    /// Current nav_state from vehicle_status (for synthetic heartbeat)
+    int navState() const { return _navState; }
+
+    /// Current arming_state from vehicle_status (for synthetic heartbeat)
+    int armingState() const { return _armingState; }
+
 public slots:
     /// Process a received DDS message. Called from DDSLink::ddsMessageReceived signal.
     /// @param topicName   Fully qualified DDS topic name
@@ -69,6 +76,8 @@ private:
 
     void _updateVehicleCoordinate(const QHash<QString, QVariant> &fields);
     void _updateVehicleState(const QHash<QString, QVariant> &fields);
+    void _updateHomePosition(const QHash<QString, QVariant> &fields);
+    void _ensureBatteryExists();
 
     DDSMappingEngine     *_mappingEngine    = nullptr;
     DDSTransformRegistry *_transformRegistry = nullptr;
@@ -77,6 +86,10 @@ private:
     quint64 _messagesProcessed = 0;
     quint64 _factsUpdated      = 0;
     quint64 _unmappedSkipped   = 0;
+
+    int  _navState     = 0;
+    int  _armingState  = 0;
+    bool _batteryCreated = false;
 };
 
 #endif // QGC_ENABLE_DDS
