@@ -48,6 +48,9 @@ public:
     /// Allows a FactGroup to parse incoming messages and fill in values
     virtual void handleMessage(Vehicle * /*vehicle*/, const mavlink_message_t & /*message*/) {}
 
+    /// Mark telemetry as available (used by DDS injection path)
+    void setTelemetryAvailable(bool available) { _setTelemetryAvailable(available); }
+
 signals:
     void factNamesChanged();
     void factGroupNamesChanged();

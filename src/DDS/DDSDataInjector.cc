@@ -57,6 +57,12 @@ void DDSDataInjector::onDDSMessage(const QString &topicName,
     if (topicName.contains(QLatin1String("battery_status"))) {
         _ensureBatteryExists();
     }
+    if (topicName.contains(QLatin1String("vehicle_gps_position"))) {
+        FactGroup *gps = _resolveFactGroup(QStringLiteral("gps"));
+        if (gps) {
+            gps->setTelemetryAvailable(true);
+        }
+    }
 
     const DDSTopicMapping *mapping = _mappingEngine->topicMapping(topicName);
     if (!mapping) {
