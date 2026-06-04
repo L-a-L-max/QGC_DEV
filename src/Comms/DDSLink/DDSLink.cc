@@ -4,6 +4,7 @@
 #include "QGCLoggingCategory.h"
 
 #include <QtCore/QDateTime>
+#include <QtNetwork/QNetworkInterface>
 
 QGC_LOGGING_CATEGORY_ON(DDSLinkLog, "Comms.DDSLink")
 
@@ -202,28 +203,74 @@ void DDSLink::_onPollTimer()
 
 dds_entity_t DDSLink::_createParticipant(int domainId)
 {
-    // Configure CycloneDDS via environment variable. This is the most
-    // reliable method across CycloneDDS versions (the dds_create_domain
-    // API changed config schema between versions).
-    // - StandardsConformance=lax: relax strict RTPS checks for cross-vendor interop
-    // - Tracing: log discovery events at config level to stderr for diagnostics
-    static const char *cycloneConfig =
-        "<CycloneDDS>"
-        "  <Domain id=\"any\">"
-        "    <Compatibility>"
-        "      <StandardsConformance>lax</StandardsConformance>"
-        "    </Compatibility>"
-        "    <Tracing>"
-        "      <Category>discovery</Category>"
-        "      <OutputFile>stderr</OutputFile>"
-        "      <Verbosity>config</Verbosity>"
-        "    </Tracing>"
-        "  </Domain>"
-        "</CycloneDDS>";
-
-    // Only set if not already configured by user
+    // Only set config if not already configured by user
     if (qEnvironmentVariableIsEmpty("CYCLONEDDS_URI")) {
-        qputenv("CYCLONEDDS_URI", cycloneConfig);
+        // Enumerate all physical network interfaces (skip loopback, docker, bridges)
+        // CycloneDDS by default picks ONE interface arbitrarily; if PX4 Agent is on
+        // a different subnet, SEDP unicast messages never reach it.
+        QString interfacesXml;
+        const auto allIfaces = QNetworkInterface::allInterfaces();
+        for (const QNetworkInterface &iface : allIfaces) {
+            if (!(iface.flags() & QNetworkInterface::IsUp)) continue;
+            if (iface.flags() & QNetworkInterface::IsLoopBack) continue;
+            const QString name = iface.name();
+            // Skip virtual/container interfaces
+            if (name.startsWith(QStringLiteral("docker")) ||
+                name.startsWith(QStringLiteral("br-")) ||
+                name.startsWith(QStringLiteral("veth")) ||
+                name.startsWith(QStringLiteral("virbr"))) {
+                continue;
+            }
+            // Must have at least one IPv4 address
+            bool hasIpv4 = false;
+            for (const QNetworkAddressEntry &entry : iface.addressEntries()) {
+                if (entry.ip().protocol() == QAbstractSocket::IPv4Protocol) {
+                    hasIpv4 = true;
+                    break;
+                }
+            }
+            if (!hasIpv4) continue;
+            interfacesXml += QStringLiteral("        <NetworkInterface name=\"%1\" multicast=\"true\"/>\n").arg(name);
+            qInfo() << "[DDSLink] Using network interface:" << name;
+        }
+
+        QString config;
+        if (interfacesXml.isEmpty()) {
+            // Fallback: let CycloneDDS choose automatically
+            config = QStringLiteral(
+                "<CycloneDDS>"
+                "  <Domain id=\"any\">"
+                "    <Compatibility>"
+                "      <StandardsConformance>lax</StandardsConformance>"
+                "    </Compatibility>"
+                "    <Tracing>"
+                "      <Category>discovery</Category>"
+                "      <OutputFile>stderr</OutputFile>"
+                "      <Verbosity>config</Verbosity>"
+                "    </Tracing>"
+                "  </Domain>"
+                "</CycloneDDS>");
+        } else {
+            config = QStringLiteral(
+                "<CycloneDDS>"
+                "  <Domain id=\"any\">"
+                "    <General>"
+                "      <Interfaces>\n%1"
+                "      </Interfaces>"
+                "    </General>"
+                "    <Compatibility>"
+                "      <StandardsConformance>lax</StandardsConformance>"
+                "    </Compatibility>"
+                "    <Tracing>"
+                "      <Category>discovery</Category>"
+                "      <OutputFile>stderr</OutputFile>"
+                "      <Verbosity>config</Verbosity>"
+                "    </Tracing>"
+                "  </Domain>"
+                "</CycloneDDS>").arg(interfacesXml);
+        }
+
+        qputenv("CYCLONEDDS_URI", config.toUtf8());
     }
 
     const dds_entity_t participant = dds_create_participant(
