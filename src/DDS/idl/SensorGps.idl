@@ -41,9 +41,6 @@ struct SensorGps_ {
     octet selected_rtcm_instance;
     boolean rtcm_crc_failed;
     octet rtcm_msg_used;
-    float antenna_offset_x;
-    float antenna_offset_y;
-    float antenna_offset_z;
 };
 
 }; // dds_
