@@ -157,6 +157,24 @@ void DDSTransformRegistry::_registerBuiltins()
         return QVariant(cog);
     });
 
+    // --- Wind speed from north/east components ---
+    registerTransform(QStringLiteral("wind_speed_from_ne"), [](const QHash<QString, QVariant> &fields) -> QVariant {
+        const double n = fieldDouble(fields, QStringLiteral("windspeed_north"));
+        const double e = fieldDouble(fields, QStringLiteral("windspeed_east"));
+        return QVariant(std::sqrt(n * n + e * e));
+    });
+
+    // --- Wind direction from north/east components ---
+    registerTransform(QStringLiteral("wind_direction_from_ne"), [](const QHash<QString, QVariant> &fields) -> QVariant {
+        const double n = fieldDouble(fields, QStringLiteral("windspeed_north"));
+        const double e = fieldDouble(fields, QStringLiteral("windspeed_east"));
+        double dir = std::atan2(e, n) * kRadToDeg;
+        if (dir < 0.0) {
+            dir += 360.0;
+        }
+        return QVariant(dir);
+    });
+
     // --- Identity (pass-through) ---
     registerTransform(QStringLiteral("identity"), [](const QHash<QString, QVariant> &fields) -> QVariant {
         return fields.value(QStringLiteral("_value"));

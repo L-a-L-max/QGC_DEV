@@ -6,8 +6,10 @@
 #include "Vehicle.h"
 #include "Fact.h"
 #include "FactGroup.h"
+#include "QmlObjectListModel.h"
 
 #include <QtCore/QDebug>
+#include <QtPositioning/QGeoCoordinate>
 
 DDSDataInjector::DDSDataInjector(DDSMappingEngine *engine,
                                  DDSTransformRegistry *transforms,
@@ -34,10 +36,21 @@ void DDSDataInjector::onDDSMessage(const QString &topicName,
     Q_UNUSED(timestampUs);
     _messagesProcessed++;
 
+    if (!_vehicle) {
+        return;
+    }
+
+    // Handle special topics that need direct Vehicle property updates
+    if (topicName.contains(QLatin1String("vehicle_global_position"))) {
+        _updateVehicleCoordinate(fields);
+    }
+    if (topicName.contains(QLatin1String("vehicle_status"))) {
+        _updateVehicleState(fields);
+    }
+
     const DDSTopicMapping *mapping = _mappingEngine->topicMapping(topicName);
     if (!mapping) {
         _unmappedSkipped++;
-        qDebug() << "[DDSDataInjector] Unmapped topic:" << topicName;
         return;
     }
 
@@ -122,6 +135,14 @@ FactGroup *DDSDataInjector::_resolveFactGroup(const QString &path) const
     if (path == QLatin1String("distanceSensors")) {
         return _vehicle->distanceSensorFactGroup();
     }
+    if (path == QLatin1String("battery")) {
+        // Battery is a list model; use the first battery (id=0) if it exists
+        QmlObjectListModel *batteries = _vehicle->batteries();
+        if (batteries && batteries->count() > 0) {
+            return qobject_cast<FactGroup *>(batteries->get(0));
+        }
+        return nullptr;
+    }
 
     qDebug() << "[DDSDataInjector] Unknown fact group:" << path;
     return nullptr;
@@ -132,18 +153,65 @@ void DDSDataInjector::_injectField(const QString &factGroupPath,
                                     const QVariant &value)
 {
     FactGroup *group = _resolveFactGroup(factGroupPath);
-    if (group) {
-        Fact *fact = group->getFact(factName);
-        if (fact) {
-            fact->setRawValue(value);
-            _factsUpdated++;
-            emit factUpdated(factGroupPath, factName, value);
-            return;
-        }
+    if (!group) {
+        return;
     }
 
-    _factsUpdated++;
-    emit factUpdated(factGroupPath, factName, value);
+    Fact *fact = group->getFact(factName);
+    if (fact) {
+        fact->setRawValue(value);
+        _factsUpdated++;
+        emit factUpdated(factGroupPath, factName, value);
+    }
+}
+
+void DDSDataInjector::_updateVehicleCoordinate(const QHash<QString, QVariant> &fields)
+{
+    // Update Vehicle::_coordinate from vehicle_global_position fields
+    const auto latIt = fields.constFind(QStringLiteral("lat"));
+    const auto lonIt = fields.constFind(QStringLiteral("lon"));
+    const auto altIt = fields.constFind(QStringLiteral("alt"));
+
+    if (latIt == fields.constEnd() || lonIt == fields.constEnd()) {
+        return;
+    }
+
+    bool latOk = false, lonOk = false;
+    const double lat = latIt->toDouble(&latOk);
+    const double lon = lonIt->toDouble(&lonOk);
+
+    if (!latOk || !lonOk) {
+        return;
+    }
+
+    // Sanity check: PX4 global position uses decimal degrees directly
+    if (lat == 0.0 && lon == 0.0) {
+        return;
+    }
+
+    double alt = 0.0;
+    if (altIt != fields.constEnd()) {
+        alt = altIt->toDouble();
+    }
+
+    QGeoCoordinate coord(lat, lon, alt);
+    if (coord.isValid()) {
+        _vehicle->setCoordinateFromDDS(coord);
+    }
+}
+
+void DDSDataInjector::_updateVehicleState(const QHash<QString, QVariant> &fields)
+{
+    // Update armed state from vehicle_status.arming_state
+    // PX4: arming_state 2 = ARMED, 1 = STANDBY/DISARMED
+    const auto armIt = fields.constFind(QStringLiteral("arming_state"));
+    if (armIt != fields.constEnd()) {
+        const int armingState = armIt->toInt();
+        const bool armed = (armingState == 2);
+        if (armed != _vehicle->armed()) {
+            _vehicle->setArmed(armed, false);
+        }
+    }
 }
 
 #endif // QGC_ENABLE_DDS

@@ -884,6 +884,14 @@ void Vehicle::_handleGlobalPositionInt(mavlink_message_t& message)
     }
 }
 
+void Vehicle::setCoordinateFromDDS(const QGeoCoordinate &coord)
+{
+    if (coord != _coordinate) {
+        _coordinate = coord;
+        emit coordinateChanged(_coordinate);
+    }
+}
+
 // TODO: VehicleFactGroup
 void Vehicle::_handleHighLatency(mavlink_message_t& message)
 {

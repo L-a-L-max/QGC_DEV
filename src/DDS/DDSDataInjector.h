@@ -20,13 +20,10 @@ class Vehicle;
 /// applies transforms via DDSTransformRegistry, and calls Fact::setRawValue()
 /// on the target Vehicle's FactGroups.
 ///
-/// Key design decisions:
-///   - Zero FactGroup modification: we call Fact::setRawValue() directly,
-///     bypassing FactGroup::handleMessage(). This means no QGC core code changes.
-///   - Thread safety: all calls happen on the Qt main thread (from DDSLink's
-///     poll timer signal).
-///   - Fallback: if a topic/field is not in the mapping table, it is silently
-///     ignored (logged at debug level).
+/// Additionally handles:
+///   - Vehicle coordinate updates (lat/lon/alt → Vehicle::setCoordinateFromDDS)
+///   - Armed state and flight mode (direct Vehicle property updates)
+///   - Battery FactGroup (via BatteryFactGroupListModel)
 
 class DDSDataInjector : public QObject
 {
@@ -69,6 +66,9 @@ private:
                       const QVariant &value);
 
     FactGroup *_resolveFactGroup(const QString &path) const;
+
+    void _updateVehicleCoordinate(const QHash<QString, QVariant> &fields);
+    void _updateVehicleState(const QHash<QString, QVariant> &fields);
 
     DDSMappingEngine     *_mappingEngine    = nullptr;
     DDSTransformRegistry *_transformRegistry = nullptr;

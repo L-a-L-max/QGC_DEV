@@ -407,6 +407,7 @@ public:
     // Property accessors
 
     QGeoCoordinate coordinate() { return _coordinate; }
+    void setCoordinateFromDDS(const QGeoCoordinate &coord);
     QGeoCoordinate armedPosition    () { return _armedPosition; }
 
     qreal getInitialGCSPressure() const { return _initialGCSPressure; }

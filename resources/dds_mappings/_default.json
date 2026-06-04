@@ -1,7 +1,7 @@
 {
   "vendor": "px4_standard",
-  "version": "1.1.0",
-  "description": "Default PX4 DDS topic mapping for QGC (PX4 v1.17). Maps standard PX4 XRCE-DDS publications to QGC FactGroups. Topic names must match the exact DDS topic names published by PX4.",
+  "version": "1.2.0",
+  "description": "Default PX4 DDS topic mapping for QGC (PX4 v1.17). Maps PX4 XRCE-DDS publications to QGC FactGroups. Only includes mappings to verified Fact names.",
   "topics": [
     {
       "dds_topic": "/fmu/out/vehicle_attitude",
@@ -32,7 +32,7 @@
     {
       "dds_topic": "/fmu/out/vehicle_global_position",
       "dds_type": "px4_msgs::msg::dds_::VehicleGlobalPosition_",
-      "description": "Global position (lat/lon/alt)",
+      "description": "Global position (lat/lon/alt). Also updates Vehicle coordinate for map display.",
       "fields": [
         {
           "dds_field": "lat",
@@ -51,12 +51,6 @@
           "fact_group": "vehicle",
           "fact_name": "altitudeAMSL",
           "description": "Altitude above mean sea level (meters)"
-        },
-        {
-          "dds_field": "alt_ellipsoid",
-          "fact_group": "vehicle",
-          "fact_name": "altitudeRelative",
-          "description": "Altitude above ellipsoid (meters)"
         }
       ]
     },
@@ -86,6 +80,25 @@
         },
         {
           "dds_field": "vx",
+          "fact_group": "localPosition",
+          "fact_name": "vx",
+          "description": "Local velocity X (m/s)"
+        },
+        {
+          "dds_field": "vy",
+          "fact_group": "localPosition",
+          "fact_name": "vy",
+          "description": "Local velocity Y (m/s)"
+        },
+        {
+          "dds_field": "vz",
+          "fact_group": "localPosition",
+          "fact_name": "vz",
+          "transform": "negate",
+          "description": "Local velocity Z: NED → positive up (m/s)"
+        },
+        {
+          "dds_field": "vx",
           "fact_group": "vehicle",
           "fact_name": "groundSpeed",
           "transform": "ground_speed_from_vxy",
@@ -97,6 +110,13 @@
           "fact_name": "climbRate",
           "transform": "negate",
           "description": "Climb rate: NED vz negated → positive up (m/s)"
+        },
+        {
+          "dds_field": "z",
+          "fact_group": "vehicle",
+          "fact_name": "altitudeRelative",
+          "transform": "negate",
+          "description": "Relative altitude from local z (NED down → positive up)"
         }
       ]
     },
@@ -104,23 +124,8 @@
       "dds_topic": "/fmu/out/vehicle_gps_position",
       "dds_type": "px4_msgs::msg::dds_::SensorGps_",
       "fact_group": "gps",
-      "description": "Raw GPS sensor data",
+      "description": "Raw GPS sensor data (hdop, vdop, satellites, fix type)",
       "fields": [
-        {
-          "dds_field": "latitude_deg",
-          "fact_name": "lat",
-          "description": "GPS latitude (decimal degrees)"
-        },
-        {
-          "dds_field": "longitude_deg",
-          "fact_name": "lon",
-          "description": "GPS longitude (decimal degrees)"
-        },
-        {
-          "dds_field": "altitude_msl_m",
-          "fact_name": "alt",
-          "description": "GPS altitude MSL (meters)"
-        },
         {
           "dds_field": "hdop",
           "fact_name": "hdop",
@@ -140,12 +145,6 @@
           "dds_field": "fix_type",
           "fact_name": "lock",
           "description": "GPS fix type (0=no fix, 2=2D, 3=3D, 4=DGPS, 5=RTK float, 6=RTK fixed)"
-        },
-        {
-          "dds_field": "vel_m_s",
-          "fact_name": "courseOverGround",
-          "transform": "course_over_ground_from_vxy",
-          "description": "Course over ground computed from velocity components"
         }
       ]
     },
@@ -184,96 +183,22 @@
       ]
     },
     {
-      "dds_topic": "/fmu/out/vehicle_status_v1",
-      "dds_type": "px4_msgs::msg::dds_::VehicleStatus_",
-      "fact_group": "vehicle",
-      "description": "Vehicle system status (arming state, flight mode, vehicle type)",
-      "fields": [
-        {
-          "dds_field": "arming_state",
-          "fact_name": "armed",
-          "description": "Arming state: 1=standby, 2=armed"
-        },
-        {
-          "dds_field": "nav_state",
-          "fact_name": "flightMode",
-          "description": "Navigation state / flight mode enumeration"
-        },
-        {
-          "dds_field": "vehicle_type",
-          "fact_name": "vehicleType",
-          "description": "Vehicle type (1=rotary wing, 2=fixed wing, etc.)"
-        },
-        {
-          "dds_field": "failsafe",
-          "fact_name": "healthAndArmingChecksPassing",
-          "description": "Failsafe active flag (inverted for health check)"
-        }
-      ]
-    },
-    {
       "dds_topic": "/fmu/out/wind",
       "dds_type": "px4_msgs::msg::dds_::Wind_",
       "fact_group": "wind",
-      "description": "Wind estimation",
+      "description": "Wind estimation (direction and speed from N/E components)",
       "fields": [
         {
           "dds_field": "windspeed_north",
           "fact_name": "direction",
-          "transform": "course_over_ground_from_vxy",
-          "description": "Wind direction computed from N/E components (degrees)"
+          "transform": "wind_direction_from_ne",
+          "description": "Wind direction from N/E components (degrees, 0=N)"
         },
         {
           "dds_field": "windspeed_north",
           "fact_name": "speed",
-          "transform": "ground_speed_from_vxy",
+          "transform": "wind_speed_from_ne",
           "description": "Wind speed from sqrt(N² + E²) (m/s)"
-        },
-        {
-          "dds_field": "variance_north",
-          "fact_name": "verticalSpeed",
-          "description": "Wind variance north (used as vertical speed proxy)"
-        }
-      ]
-    },
-    {
-      "dds_topic": "/fmu/out/vehicle_land_detected",
-      "dds_type": "px4_msgs::msg::dds_::VehicleLandDetected_",
-      "fact_group": "vehicle",
-      "description": "Landing detection status",
-      "fields": [
-        {
-          "dds_field": "landed",
-          "fact_name": "landed",
-          "description": "True if vehicle is landed"
-        },
-        {
-          "dds_field": "freefall",
-          "fact_name": "freefall",
-          "description": "True if vehicle is in freefall"
-        }
-      ]
-    },
-    {
-      "dds_topic": "/fmu/out/home_position_v1",
-      "dds_type": "px4_msgs::msg::dds_::HomePosition_",
-      "fact_group": "homePosition",
-      "description": "Home/launch position",
-      "fields": [
-        {
-          "dds_field": "lat",
-          "fact_name": "lat",
-          "description": "Home latitude (decimal degrees)"
-        },
-        {
-          "dds_field": "lon",
-          "fact_name": "lon",
-          "description": "Home longitude (decimal degrees)"
-        },
-        {
-          "dds_field": "alt",
-          "fact_name": "alt",
-          "description": "Home altitude MSL (meters)"
         }
       ]
     },
@@ -287,142 +212,6 @@
           "dds_field": "calibrated_airspeed_m_s",
           "fact_name": "airSpeed",
           "description": "Calibrated airspeed (m/s)"
-        },
-        {
-          "dds_field": "true_airspeed_m_s",
-          "fact_name": "airSpeedTrue",
-          "description": "True airspeed (m/s)"
-        }
-      ]
-    },
-    {
-      "dds_topic": "/fmu/out/vehicle_odometry",
-      "dds_type": "px4_msgs::msg::dds_::VehicleOdometry_",
-      "fact_group": "vehicle",
-      "description": "Vehicle odometry (position + velocity + attitude)",
-      "fields": [
-        {
-          "dds_field": "velocity[0]",
-          "fact_name": "rollRate",
-          "description": "Angular velocity x (rad/s) — mapped to rollRate proxy"
-        },
-        {
-          "dds_field": "velocity[1]",
-          "fact_name": "pitchRate",
-          "description": "Angular velocity y (rad/s) — mapped to pitchRate proxy"
-        },
-        {
-          "dds_field": "velocity[2]",
-          "fact_name": "yawRate",
-          "description": "Angular velocity z (rad/s) — mapped to yawRate proxy"
-        }
-      ]
-    },
-    {
-      "dds_topic": "/fmu/out/estimator_status_flags",
-      "dds_type": "px4_msgs::msg::dds_::EstimatorStatusFlags_",
-      "fact_group": "estimatorStatus",
-      "description": "EKF estimator status flags",
-      "fields": [
-        {
-          "dds_field": "cs_pos_horiz_abs",
-          "fact_name": "goodPosEstimate",
-          "description": "Good horizontal absolute position estimate"
-        },
-        {
-          "dds_field": "cs_pos_vert_abs",
-          "fact_name": "goodAltEstimate",
-          "description": "Good vertical absolute position estimate"
-        },
-        {
-          "dds_field": "cs_gps_glitch",
-          "fact_name": "gpsGlitch",
-          "description": "GPS glitch detected"
-        }
-      ]
-    },
-    {
-      "dds_topic": "/fmu/out/failsafe_flags",
-      "dds_type": "px4_msgs::msg::dds_::FailsafeFlags_",
-      "fact_group": "vehicle",
-      "description": "Failsafe condition flags",
-      "fields": [
-        {
-          "dds_field": "manual_control_signal_lost",
-          "fact_name": "rcRSSI",
-          "description": "RC signal lost flag (inverted: 0 = signal OK)"
-        },
-        {
-          "dds_field": "gps_position_invalid",
-          "fact_name": "gpsInvalid",
-          "description": "GPS position invalid flag"
-        }
-      ]
-    },
-    {
-      "dds_topic": "/fmu/out/vehicle_control_mode",
-      "dds_type": "px4_msgs::msg::dds_::VehicleControlMode_",
-      "fact_group": "vehicle",
-      "description": "Control mode flags (manual, stabilized, auto, etc.)",
-      "fields": [
-        {
-          "dds_field": "flag_armed",
-          "fact_name": "armed",
-          "description": "Armed flag from control mode"
-        },
-        {
-          "dds_field": "flag_control_manual_enabled",
-          "fact_name": "manualControl",
-          "description": "Manual control mode enabled"
-        },
-        {
-          "dds_field": "flag_control_auto_enabled",
-          "fact_name": "autoMode",
-          "description": "Auto control mode enabled"
-        }
-      ]
-    },
-    {
-      "dds_topic": "/fmu/out/vehicle_command_ack",
-      "dds_type": "px4_msgs::msg::dds_::VehicleCommandAck_",
-      "fact_group": "_system",
-      "description": "Command acknowledgment (processed by DDSCommandManager, not FactGroup)",
-      "fields": [
-        {
-          "dds_field": "command",
-          "fact_name": "_commandId",
-          "description": "Command ID that was acknowledged"
-        },
-        {
-          "dds_field": "result",
-          "fact_name": "_commandResult",
-          "description": "Result code (0=accepted, 1=temporarily rejected, etc.)"
-        }
-      ]
-    },
-    {
-      "dds_topic": "/fmu/out/gimbal_device_attitude_status",
-      "dds_type": "px4_msgs::msg::dds_::GimbalDeviceAttitudeStatus_",
-      "fact_group": "gimbal",
-      "description": "Gimbal device attitude status",
-      "fields": [
-        {
-          "dds_field": "q[0]",
-          "fact_name": "gimbalRoll",
-          "transform": "quaternion_to_euler_roll",
-          "description": "Gimbal roll from quaternion (degrees)"
-        },
-        {
-          "dds_field": "q[0]",
-          "fact_name": "gimbalPitch",
-          "transform": "quaternion_to_euler_pitch",
-          "description": "Gimbal pitch from quaternion (degrees)"
-        },
-        {
-          "dds_field": "q[0]",
-          "fact_name": "gimbalYaw",
-          "transform": "quaternion_to_euler_yaw",
-          "description": "Gimbal yaw from quaternion (degrees)"
         }
       ]
     },
@@ -430,23 +219,8 @@
       "dds_topic": "/fmu/out/sensor_combined",
       "dds_type": "px4_msgs::msg::dds_::SensorCombined_",
       "fact_group": "vehicle",
-      "description": "Combined sensor data (IMU accelerometer + gyroscope)",
+      "description": "Gyroscope angular rates → rollRate/pitchRate/yawRate",
       "fields": [
-        {
-          "dds_field": "accelerometer_m_s2[0]",
-          "fact_name": "xacc",
-          "description": "X acceleration (m/s²)"
-        },
-        {
-          "dds_field": "accelerometer_m_s2[1]",
-          "fact_name": "yacc",
-          "description": "Y acceleration (m/s²)"
-        },
-        {
-          "dds_field": "accelerometer_m_s2[2]",
-          "fact_name": "zacc",
-          "description": "Z acceleration (m/s²)"
-        },
         {
           "dds_field": "gyro_rad[0]",
           "fact_name": "rollRate",
@@ -482,40 +256,34 @@
       ]
     },
     {
-      "dds_topic": "/fmu/out/vtol_vehicle_status",
-      "dds_type": "px4_msgs::msg::dds_::VtolVehicleStatus_",
-      "fact_group": "vehicle",
-      "description": "VTOL vehicle status (transition state)",
+      "dds_topic": "/fmu/out/estimator_status_flags",
+      "dds_type": "px4_msgs::msg::dds_::EstimatorStatusFlags_",
+      "fact_group": "estimatorStatus",
+      "description": "EKF estimator status flags",
       "fields": [
         {
-          "dds_field": "vehicle_vtol_state",
-          "fact_name": "vtolState",
-          "description": "VTOL state: 1=transition to FW, 2=transition to MC, 3=FW, 4=MC"
+          "dds_field": "cs_pos_horiz_abs",
+          "fact_name": "goodHorizPosAbsEstimate",
+          "description": "Good horizontal absolute position estimate"
+        },
+        {
+          "dds_field": "cs_pos_vert_abs",
+          "fact_name": "goodVertPosAbsEstimate",
+          "description": "Good vertical absolute position estimate"
+        },
+        {
+          "dds_field": "cs_gps_glitch",
+          "fact_name": "gpsGlitch",
+          "description": "GPS glitch detected"
         }
       ]
     },
     {
-      "dds_topic": "/fmu/out/transponder_report",
-      "dds_type": "px4_msgs::msg::dds_::TransponderReport_",
-      "fact_group": "remoteID",
-      "description": "Remote ID / ADS-B transponder report",
-      "fields": [
-        {
-          "dds_field": "lat",
-          "fact_name": "lat",
-          "description": "Transponder latitude"
-        },
-        {
-          "dds_field": "lon",
-          "fact_name": "lon",
-          "description": "Transponder longitude"
-        },
-        {
-          "dds_field": "altitude",
-          "fact_name": "alt",
-          "description": "Transponder altitude"
-        }
-      ]
+      "dds_topic": "/fmu/out/vehicle_status_v1",
+      "dds_type": "px4_msgs::msg::dds_::VehicleStatus_",
+      "fact_group": "_internal",
+      "description": "Vehicle status — handled directly by DDSDataInjector (armed state). No Fact injection.",
+      "fields": []
     }
   ]
 }
