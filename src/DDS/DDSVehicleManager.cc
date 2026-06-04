@@ -3,6 +3,7 @@
 #include "DDSVehicleManager.h"
 #include "DDSLink.h"
 #include "DDSDataInjector.h"
+#include "LinkInterface.h"
 #include "MAVLinkProtocol.h"
 #include "MultiVehicleManager.h"
 #include "Vehicle.h"
@@ -10,12 +11,18 @@
 #include <QtCore/QDebug>
 #include <QtCore/QTimer>
 
+#include <mavlink.h>
+
 DDSVehicleManager::DDSVehicleManager(DDSLink *link, QObject *parent)
     : QObject(parent)
     , _link(link)
 {
     (void) connect(link, &DDSLink::ddsMessageReceived,
                    this, &DDSVehicleManager::onDDSMessage);
+    (void) connect(&_heartbeatTimer, &QTimer::timeout,
+                   this, &DDSVehicleManager::_emitSyntheticHeartbeat);
+    (void) connect(link, &LinkInterface::disconnected,
+                   &_heartbeatTimer, &QTimer::stop);
 }
 
 DDSVehicleManager::~DDSVehicleManager() = default;
@@ -68,6 +75,9 @@ void DDSVehicleManager::_createVehicle(int vehicleType)
     constexpr int vehicleId = 1;
     constexpr int componentId = MAV_COMP_ID_AUTOPILOT1;
 
+    _vehicleId = vehicleId;
+    _mavType = mavType;
+
     qInfo() << "[DDSVehicleManager] Creating DDS vehicle: id=" << vehicleId
              << "type=" << vehicleType << "MAV_TYPE=" << mavType;
 
@@ -90,11 +100,37 @@ void DDSVehicleManager::_createVehicle(int vehicleType)
         if (vehicle) {
             _link->dataInjector()->setVehicle(vehicle);
             qInfo() << "[DDSVehicleManager] Attached DDSDataInjector to vehicle" << vehicleId;
+
+            // Start periodic heartbeat to prevent VehicleLinkManager from
+            // declaring communication lost (heartbeat timeout is 3.5s)
+            _heartbeatTimer.start(1000);
         } else {
             qWarning() << "[DDSVehicleManager] Vehicle" << vehicleId << "not found after creation";
             _vehicleCreated = false;
         }
     });
+}
+
+void DDSVehicleManager::_emitSyntheticHeartbeat()
+{
+    if (!_link || !_vehicleCreated) {
+        _heartbeatTimer.stop();
+        return;
+    }
+
+    mavlink_message_t msg{};
+    mavlink_msg_heartbeat_pack_chan(
+        static_cast<uint8_t>(_vehicleId),
+        MAV_COMP_ID_AUTOPILOT1,
+        0,  // channel (unused for our purpose)
+        &msg,
+        static_cast<uint8_t>(_mavType),
+        MAV_AUTOPILOT_PX4,
+        MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
+        0,  // custom_mode
+        MAV_STATE_ACTIVE);
+
+    emit MAVLinkProtocol::instance()->messageReceived(_link, msg);
 }
 
 #endif // QGC_ENABLE_DDS

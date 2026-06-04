@@ -5,6 +5,7 @@
 #include <QtCore/QHash>
 #include <QtCore/QObject>
 #include <QtCore/QString>
+#include <QtCore/QTimer>
 #include <QtCore/QVariant>
 
 class DDSDataInjector;
@@ -39,9 +40,13 @@ public slots:
 
 private:
     void _createVehicle(int vehicleType);
+    void _emitSyntheticHeartbeat();
 
     DDSLink *_link = nullptr;
     bool     _vehicleCreated = false;
+    QTimer   _heartbeatTimer;
+    int      _vehicleId = 0;
+    int      _mavType = 0;
 };
 
 #endif // QGC_ENABLE_DDS
