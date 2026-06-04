@@ -51,6 +51,9 @@ void DDSDataInjector::onDDSMessage(const QString &topicName,
     if (topicName.contains(QLatin1String("home_position"))) {
         _updateHomePosition(fields);
     }
+    if (topicName.contains(QLatin1String("land_detected"))) {
+        _updateLandDetected(fields);
+    }
     if (topicName.contains(QLatin1String("battery_status"))) {
         _ensureBatteryExists();
     }
@@ -245,6 +248,18 @@ void DDSDataInjector::_updateHomePosition(const QHash<QString, QVariant> &fields
     if (homeCoord.isValid()) {
         _vehicle->_setHomePosition(homeCoord);
     }
+}
+
+void DDSDataInjector::_updateLandDetected(const QHash<QString, QVariant> &fields)
+{
+    const auto landedIt = fields.constFind(QStringLiteral("landed"));
+    if (landedIt == fields.constEnd()) {
+        return;
+    }
+
+    const bool landed = landedIt->toBool();
+    _vehicle->_setFlying(!landed);
+    _vehicle->_setLanding(false);
 }
 
 void DDSDataInjector::_ensureBatteryExists()

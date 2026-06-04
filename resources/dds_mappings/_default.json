@@ -291,6 +291,13 @@
       "fact_group": "_internal",
       "description": "Home position — handled directly by DDSDataInjector to set Vehicle home coordinate for distanceToHome.",
       "fields": []
+    },
+    {
+      "dds_topic": "/fmu/out/vehicle_land_detected",
+      "dds_type": "px4_msgs::msg::dds_::VehicleLandDetected_",
+      "fact_group": "_internal",
+      "description": "Land detection — handled by DDSDataInjector to set Vehicle flying/landing state for status display.",
+      "fields": []
     }
   ]
 }

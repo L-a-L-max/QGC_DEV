@@ -77,6 +77,7 @@ private:
     void _updateVehicleCoordinate(const QHash<QString, QVariant> &fields);
     void _updateVehicleState(const QHash<QString, QVariant> &fields);
     void _updateHomePosition(const QHash<QString, QVariant> &fields);
+    void _updateLandDetected(const QHash<QString, QVariant> &fields);
     void _ensureBatteryExists();
 
     DDSMappingEngine     *_mappingEngine    = nullptr;
