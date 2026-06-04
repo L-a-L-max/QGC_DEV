@@ -72,6 +72,17 @@ bool DDSLink::_connect()
     }
 
     _subscribeToTopics(_participant, _mappingEngine.allTopicNames());
+
+    // Initialize command publisher (DDS writer for sending commands to PX4)
+    const QString nsPrefix = config->namespacePrefix().isEmpty()
+                                 ? QStringLiteral("rt/")
+                                 : QStringLiteral("rt/") + config->namespacePrefix() + QStringLiteral("/");
+    if (_commandPublisher.init(_participant, nsPrefix)) {
+        qInfo() << "[DDSLink] Command publisher ready";
+    } else {
+        qWarning() << "[DDSLink] Command publisher init failed (commands will not work)";
+    }
+
     _pollTimer.start();
 
     _connected = true;
@@ -148,6 +159,9 @@ void DDSLink::disconnect()
     }
 
     _pollTimer.stop();
+
+    // Deinit command publisher before destroying participant
+    _commandPublisher.deinit();
 
     // Delete readers explicitly before destroying participant
     for (auto it = _readers.cbegin(); it != _readers.cend(); ++it) {

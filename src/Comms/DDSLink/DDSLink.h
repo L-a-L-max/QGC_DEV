@@ -9,6 +9,7 @@
 #include "DDSDataInjector.h"
 #include "DDSTypeRegistry.h"
 #include "DDSVehicleManager.h"
+#include "DDSCommandPublisher.h"
 
 #include <dds/dds.h>
 
@@ -37,6 +38,7 @@ public:
     DDSMappingEngine *mappingEngine() { return &_mappingEngine; }
     DDSTransformRegistry *transformRegistry() { return &_transformRegistry; }
     DDSDataInjector *dataInjector() { return &_dataInjector; }
+    DDSCommandPublisher *commandPublisher() { return &_commandPublisher; }
 
 signals:
     void ddsMessageReceived(const QString &topicName,
@@ -64,6 +66,7 @@ private:
     DDSTypeRegistry      _typeRegistry;
     DDSDataInjector      _dataInjector;
     DDSVehicleManager    _vehicleManager;
+    DDSCommandPublisher  _commandPublisher;
 
     QTimer               _pollTimer;
     dds_entity_t         _participant = DDS_ENTITY_NIL;

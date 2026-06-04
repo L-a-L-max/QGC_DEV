@@ -36,6 +36,9 @@
 #include "JoystickManager.h"
 #include "LinkManager.h"
 #include "MavCommandQueue.h"
+#ifdef QGC_ENABLE_DDS
+#include "DDSCommandPublisher.h"
+#endif
 #include "MessageIntervalManager.h"
 #include "TerrainQueryCoordinator.h"
 #include "MAVLinkLogManager.h"
@@ -1828,6 +1831,22 @@ void Vehicle::_setLanding(bool landing)
     }
 }
 
+void Vehicle::_setReadyToFlyAvailable(bool available)
+{
+    if (_readyToFlyAvailable != available) {
+        _readyToFlyAvailable = available;
+        emit readyToFlyAvailableChanged(available);
+    }
+}
+
+void Vehicle::_setReadyToFly(bool ready)
+{
+    if (_readyToFly != ready) {
+        _readyToFly = ready;
+        emit readyToFlyChanged(ready);
+    }
+}
+
 QString Vehicle::gotoFlightMode() const
 {
     return _firmwarePlugin->gotoFlightMode();
@@ -2153,6 +2172,17 @@ void Vehicle::setCurrentMissionSequence(int seq)
 
 void Vehicle::sendMavCommand(int compId, MAV_CMD command, bool showError, float param1, float param2, float param3, float param4, float param5, float param6, float param7)
 {
+#ifdef QGC_ENABLE_DDS
+    if (_ddsCommandPublisher && _ddsCommandPublisher->isReady()) {
+        _ddsCommandPublisher->sendCommand(
+            static_cast<uint32_t>(command),
+            param1, param2, param3, param4,
+            static_cast<double>(param5), static_cast<double>(param6), param7,
+            static_cast<uint8_t>(id()),
+            static_cast<uint8_t>(compId));
+        return;
+    }
+#endif
     _mavCmdQueue->sendCommand(compId, command, showError, param1, param2, param3, param4, param5, param6, param7);
 }
 
@@ -2182,6 +2212,17 @@ void Vehicle::sendMavCommandWithHandler(const MavCmdAckHandlerInfo_t* ackHandler
 
 void Vehicle::sendMavCommandInt(int compId, MAV_CMD command, MAV_FRAME frame, bool showError, float param1, float param2, float param3, float param4, double param5, double param6, float param7)
 {
+#ifdef QGC_ENABLE_DDS
+    if (_ddsCommandPublisher && _ddsCommandPublisher->isReady()) {
+        _ddsCommandPublisher->sendCommand(
+            static_cast<uint32_t>(command),
+            param1, param2, param3, param4,
+            param5, param6, param7,
+            static_cast<uint8_t>(id()),
+            static_cast<uint8_t>(compId));
+        return;
+    }
+#endif
     _mavCmdQueue->sendCommandInt(compId, command, frame, showError, param1, param2, param3, param4, param5, param6, param7);
 }
 

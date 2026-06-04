@@ -67,6 +67,9 @@ signals:
     /// Emitted when a Fact value is updated from DDS data.
     void factUpdated(const QString &factGroupPath, const QString &factName, const QVariant &value);
 
+    /// Emitted when a command ACK is received from PX4.
+    void commandAckReceived(uint32_t command, uint8_t result, uint8_t targetSystem);
+
 private:
     void _injectField(const QString &factGroupPath,
                       const QString &factName,
@@ -78,6 +81,8 @@ private:
     void _updateVehicleState(const QHash<QString, QVariant> &fields);
     void _updateHomePosition(const QHash<QString, QVariant> &fields);
     void _updateLandDetected(const QHash<QString, QVariant> &fields);
+    void _updateReadyToFly(const QHash<QString, QVariant> &fields);
+    void _handleCommandAck(const QHash<QString, QVariant> &fields);
     void _ensureBatteryExists();
 
     DDSMappingEngine     *_mappingEngine    = nullptr;
@@ -91,6 +96,7 @@ private:
     int  _navState     = 0;
     int  _armingState  = 0;
     bool _batteryCreated = false;
+    bool _readyToFlySet = false;
 };
 
 #endif // QGC_ENABLE_DDS

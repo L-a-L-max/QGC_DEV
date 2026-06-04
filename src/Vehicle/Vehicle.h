@@ -81,6 +81,7 @@ class TerrainProtocolHandler;
 class TrajectoryPoints;
 class VehicleObjectAvoidance;
 class VehicleSupports;
+class DDSCommandPublisher;
 
 class Vehicle : public VehicleFactGroup, public VehicleTypes
 {
@@ -580,6 +581,12 @@ public:
     Autotune*                       autotune            () const { return _autotune; }
     RemoteIDManager*                remoteIDManager     () { return _remoteIDManager; }
 
+#ifdef QGC_ENABLE_DDS
+    /// Set the DDS command publisher for this vehicle (called by DDSVehicleManager).
+    void setDDSCommandPublisher(DDSCommandPublisher *publisher) { _ddsCommandPublisher = publisher; }
+    DDSCommandPublisher *ddsCommandPublisher() const { return _ddsCommandPublisher; }
+#endif
+
     static void showCommandAckError(const mavlink_command_ack_t& ack);
 
     /// Sends the specified MAV_CMD to the vehicle. If no Ack is received command will be retried. If a sendMavCommand is already in progress
@@ -708,6 +715,8 @@ public:
     void _setFlying(bool flying);
     void _setLanding(bool landing);
     void _setHomePosition(QGeoCoordinate& homeCoord);
+    void _setReadyToFlyAvailable(bool available);
+    void _setReadyToFly(bool ready);
 
     /// Vehicle is about to be deleted
     void prepareDelete();
@@ -946,6 +955,9 @@ private:
     bool            _readyToFlyAvailable                    = false;
     bool            _readyToFly                             = false;
     bool            _allSensorsHealthy                      = true;
+#ifdef QGC_ENABLE_DDS
+    DDSCommandPublisher *_ddsCommandPublisher               = nullptr;
+#endif
     VehicleSigningController* _signingController            = nullptr;
     std::atomic<bool> _joystickAuxRcOverrideActive           = false;
 

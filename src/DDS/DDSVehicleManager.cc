@@ -102,6 +102,10 @@ void DDSVehicleManager::_createVehicle(int vehicleType)
             _link->dataInjector()->setVehicle(vehicle);
             qInfo() << "[DDSVehicleManager] Attached DDSDataInjector to vehicle" << vehicleId;
 
+            // Attach DDS command publisher so Vehicle can send commands via DDS
+            vehicle->setDDSCommandPublisher(_link->commandPublisher());
+            qInfo() << "[DDSVehicleManager] Attached DDSCommandPublisher to vehicle" << vehicleId;
+
             // Start periodic heartbeat to prevent VehicleLinkManager from
             // declaring communication lost (heartbeat timeout is 3.5s)
             _heartbeatTimer.start(1000);

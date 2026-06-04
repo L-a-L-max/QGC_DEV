@@ -304,6 +304,20 @@
       "fact_group": "_internal",
       "description": "Land detection — handled by DDSDataInjector to set Vehicle flying/landing state for status display.",
       "fields": []
+    },
+    {
+      "dds_topic": "/fmu/out/failsafe_flags",
+      "dds_type": "px4_msgs::msg::dds_::FailsafeFlags_",
+      "fact_group": "_internal",
+      "description": "Failsafe flags — handled by DDSDataInjector to determine ready-to-fly status.",
+      "fields": []
+    },
+    {
+      "dds_topic": "/fmu/out/vehicle_command_ack",
+      "dds_type": "px4_msgs::msg::dds_::VehicleCommandAck_",
+      "fact_group": "_internal",
+      "description": "Command acknowledgement — handled by DDSDataInjector for command result feedback.",
+      "fields": []
     }
   ]
 }

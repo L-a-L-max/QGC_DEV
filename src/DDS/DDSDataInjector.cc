@@ -54,6 +54,12 @@ void DDSDataInjector::onDDSMessage(const QString &topicName,
     if (topicName.contains(QLatin1String("land_detected"))) {
         _updateLandDetected(fields);
     }
+    if (topicName.contains(QLatin1String("failsafe_flags"))) {
+        _updateReadyToFly(fields);
+    }
+    if (topicName.contains(QLatin1String("vehicle_command_ack"))) {
+        _handleCommandAck(fields);
+    }
     if (topicName.contains(QLatin1String("battery_status"))) {
         _ensureBatteryExists();
     }
@@ -266,6 +272,40 @@ void DDSDataInjector::_updateLandDetected(const QHash<QString, QVariant> &fields
     const bool landed = landedIt->toBool();
     _vehicle->_setFlying(!landed);
     _vehicle->_setLanding(false);
+}
+
+void DDSDataInjector::_updateReadyToFly(const QHash<QString, QVariant> &fields)
+{
+    // Determine readyToFly from failsafe_flags:
+    // If no critical failsafe flags are set and arming_state is STANDBY (1),
+    // the vehicle is ready to fly.
+    bool hasCriticalFailsafe = false;
+
+    if (fields.value(QStringLiteral("global_position_invalid"), false).toBool() ||
+        fields.value(QStringLiteral("local_position_invalid"), false).toBool() ||
+        fields.value(QStringLiteral("fd_critical_failure"), false).toBool()) {
+        hasCriticalFailsafe = true;
+    }
+
+    const bool readyToFly = (_armingState == 1) && !hasCriticalFailsafe;
+
+    if (!_readyToFlySet) {
+        _readyToFlySet = true;
+        _vehicle->_setReadyToFlyAvailable(true);
+    }
+    _vehicle->_setReadyToFly(readyToFly);
+}
+
+void DDSDataInjector::_handleCommandAck(const QHash<QString, QVariant> &fields)
+{
+    const uint32_t command = fields.value(QStringLiteral("command"), 0).toUInt();
+    const uint8_t result = static_cast<uint8_t>(fields.value(QStringLiteral("result"), 0).toUInt());
+    const uint8_t targetSystem = static_cast<uint8_t>(fields.value(QStringLiteral("target_system"), 0).toUInt());
+
+    qInfo() << "[DDSDataInjector] Command ACK: cmd=" << command
+            << "result=" << result << "target=" << targetSystem;
+
+    emit commandAckReceived(command, result, targetSystem);
 }
 
 void DDSDataInjector::_ensureBatteryExists()
