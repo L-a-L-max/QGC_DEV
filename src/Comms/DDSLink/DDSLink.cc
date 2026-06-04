@@ -77,23 +77,23 @@ bool DDSLink::_connect()
     qInfo() << "[DDSLink] DDS link connected on domain" << config->domainId();
     emit connected();
 
-    // Early diagnostic at 3s: check if we can discover ANY remote participants
+    // Early diagnostic at 3s: probe reader-writer matching status
     QTimer::singleShot(3000, this, [this]() {
         if (!_connected || _participant <= 0) return;
-        // Use the builtin DCPSParticipant reader to count discovered participants
-        const dds_entity_t builtinSub = dds_get_builtin_subscriber(_participant);
-        if (builtinSub > 0) {
-            qInfo() << "[DDSLink] Participant discovery check (3s): builtin subscriber ="
-                     << builtinSub;
-        }
-        // Also sample one reader to report its topic/type info
+        int totalMatched = 0;
+        int probed = 0;
         for (auto it = _readers.cbegin(); it != _readers.cend(); ++it) {
             if (it.value().reader <= 0) continue;
             dds_instance_handle_t handles[10];
             const int n = dds_get_matched_publications(it.value().reader, handles, 10);
-            qInfo() << "[DDSLink] Early probe:" << it.key() << "→" << n << "matched writer(s)";
-            break; // Only check the first reader
+            if (n > 0) ++totalMatched;
+            if (probed < 3) {
+                qInfo() << "[DDSLink] Early probe:" << it.key() << "→" << n << "matched writer(s)";
+            }
+            ++probed;
         }
+        qInfo() << "[DDSLink] Discovery check (3s):" << totalMatched
+                 << "of" << probed << "readers have matched a writer";
     });
 
     // Delayed diagnostic: check RTPS writer matching after discovery period
