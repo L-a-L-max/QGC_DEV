@@ -35,11 +35,6 @@ struct FailsafeFlags_ {
     octet battery_warning;
     boolean battery_low_remaining_time;
     boolean battery_unhealthy;
-    boolean fd_critical_failure;
-    boolean fd_esc_arming_failure;
-    boolean fd_imbalanced_prop;
-    boolean fd_motor_failure;
-    boolean fd_alt_loss;
     boolean geofence_breached;
     boolean mission_failure;
     boolean vtol_fixed_wing_system_failure;
@@ -47,9 +42,10 @@ struct FailsafeFlags_ {
     boolean flight_time_limit_exceeded;
     boolean position_accuracy_low;
     boolean navigator_failure;
-    boolean parachute_unhealthy;
-    boolean remote_id_unhealthy;
-    boolean gnss_lost;
+    boolean fd_critical_failure;
+    boolean fd_esc_arming_failure;
+    boolean fd_imbalanced_prop;
+    boolean fd_motor_failure;
 };
 
 }; // dds_

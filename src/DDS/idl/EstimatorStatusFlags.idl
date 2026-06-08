@@ -55,8 +55,6 @@ struct EstimatorStatusFlags_ {
     boolean cs_gnss_fault;
     boolean cs_yaw_manual;
     boolean cs_gnss_hgt_fault;
-    boolean cs_in_transition;
-    boolean cs_heading_observable;
     unsigned long fault_status_changes;
     boolean fs_bad_mag_x;
     boolean fs_bad_mag_y;
@@ -69,6 +67,17 @@ struct EstimatorStatusFlags_ {
     boolean fs_bad_optflow_y;
     boolean fs_bad_acc_vertical;
     boolean fs_bad_acc_clipping;
+    unsigned long innovation_fault_status_changes;
+    boolean reject_hor_vel;
+    boolean reject_ver_vel;
+    boolean reject_hor_pos;
+    boolean reject_ver_pos;
+    boolean reject_yaw;
+    boolean reject_airspeed;
+    boolean reject_sideslip;
+    boolean reject_hagl;
+    boolean reject_optflow_x;
+    boolean reject_optflow_y;
 };
 
 }; // dds_
