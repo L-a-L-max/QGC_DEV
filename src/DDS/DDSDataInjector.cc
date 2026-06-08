@@ -269,17 +269,14 @@ void DDSDataInjector::_updateVehicleState(const QHash<QString, QVariant> &fields
             const uint32_t customMode = _navStateToCustomMode(_navState);
             const uint8_t  baseMode   = MAV_MODE_FLAG_CUSTOM_MODE_ENABLED;
 
-            QString previousFlightMode;
-            if (_vehicle->_base_mode != 0 || _vehicle->_custom_mode != 0) {
-                previousFlightMode = _vehicle->flightMode();
-            }
             _vehicle->_base_mode   = baseMode;
             _vehicle->_custom_mode = customMode;
 
             const QString newFlightMode = _vehicle->flightMode();
-            if (previousFlightMode != newFlightMode) {
-                emit _vehicle->flightModeChanged(newFlightMode);
-            }
+            qInfo() << "[DDSDataInjector] nav_state changed:" << _navState
+                    << "→ custom_mode:" << customMode
+                    << "→ flightMode:" << newFlightMode;
+            emit _vehicle->flightModeChanged(newFlightMode);
         }
     }
 }

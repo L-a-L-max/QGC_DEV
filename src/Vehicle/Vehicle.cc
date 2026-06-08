@@ -1510,6 +1510,11 @@ void Vehicle::setFlightMode(const QString& flightMode)
                            true,    // show error if fails
                            MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
                            custom_mode);
+            // Anticipate mode change so _setFlightModeAndValidate sees it
+            // immediately. DDS vehicle_status will confirm or correct later.
+            _base_mode   = MAV_MODE_FLAG_CUSTOM_MODE_ENABLED;
+            _custom_mode = custom_mode;
+            emit flightModeChanged(flightMode);
         } else {
             mavlink_message_t msg;
             mavlink_msg_set_mode_pack_chan(MAVLinkProtocol::instance()->getSystemId(),
