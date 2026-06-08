@@ -3,7 +3,6 @@
 #include "DDSHeartbeatPublisher.h"
 #include "TelemetryStatus.h"
 
-#include <QtCore/QDateTime>
 #include <QtCore/QDebug>
 
 #include <cstring>
@@ -85,7 +84,9 @@ void DDSHeartbeatPublisher::_sendHeartbeat()
     px4_msgs_msg_dds__TelemetryStatus_ msg;
     memset(&msg, 0, sizeof(msg));
 
-    msg.timestamp = static_cast<uint64_t>(QDateTime::currentMSecsSinceEpoch()) * 1000ULL;
+    // timestamp=0 tells PX4 to use hrt_absolute_time() internally,
+    // avoiding any clock domain mismatch between QGC and PX4.
+    msg.timestamp = 0;
     msg.heartbeat_type_gcs = true;
 
     dds_write(_writer, &msg);

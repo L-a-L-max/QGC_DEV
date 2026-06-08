@@ -25,7 +25,7 @@ public:
     /// @return true if writer was successfully created
     bool init(dds_entity_t participant,
               const QString &namespacePrefix,
-              int intervalMs = 1000);
+              int intervalMs = 500);
 
     void deinit();
 
