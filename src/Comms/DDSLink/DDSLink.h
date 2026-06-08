@@ -10,6 +10,7 @@
 #include "DDSTypeRegistry.h"
 #include "DDSVehicleManager.h"
 #include "DDSCommandPublisher.h"
+#include "DDSHeartbeatPublisher.h"
 
 #include <dds/dds.h>
 
@@ -39,6 +40,7 @@ public:
     DDSTransformRegistry *transformRegistry() { return &_transformRegistry; }
     DDSDataInjector *dataInjector() { return &_dataInjector; }
     DDSCommandPublisher *commandPublisher() { return &_commandPublisher; }
+    DDSHeartbeatPublisher *heartbeatPublisher() { return &_heartbeatPublisher; }
 
 signals:
     void ddsMessageReceived(const QString &topicName,
@@ -67,6 +69,7 @@ private:
     DDSDataInjector      _dataInjector;
     DDSVehicleManager    _vehicleManager;
     DDSCommandPublisher  _commandPublisher;
+    DDSHeartbeatPublisher _heartbeatPublisher;
 
     QTimer               _pollTimer;
     dds_entity_t         _participant = DDS_ENTITY_NIL;

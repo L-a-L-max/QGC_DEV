@@ -1,0 +1,50 @@
+module px4_msgs {
+module msg {
+module dds_ {
+
+@topic
+struct TelemetryStatus_ {
+    unsigned long long timestamp;
+    octet type;
+    octet mode;
+    boolean flow_control;
+    boolean forwarding;
+    boolean mavlink_v2;
+    boolean ftp;
+    octet streams;
+    float data_rate;
+    float rate_multiplier;
+    float tx_rate_avg;
+    float tx_error_rate_avg;
+    unsigned long tx_message_count;
+    unsigned long tx_buffer_overruns;
+    float rx_rate_avg;
+    unsigned long rx_message_count;
+    unsigned long rx_message_lost_count;
+    unsigned long rx_buffer_overruns;
+    unsigned long rx_parse_errors;
+    unsigned long rx_packet_drop_count;
+    float rx_message_lost_rate;
+    boolean heartbeat_type_antenna_tracker;
+    boolean heartbeat_type_gcs;
+    boolean heartbeat_type_onboard_controller;
+    boolean heartbeat_type_gimbal;
+    boolean heartbeat_type_adsb;
+    boolean heartbeat_type_flarm;
+    boolean heartbeat_type_camera;
+    boolean heartbeat_type_parachute;
+    boolean heartbeat_type_open_drone_id;
+    boolean heartbeat_component_telemetry_radio;
+    boolean heartbeat_component_log;
+    boolean heartbeat_component_osd;
+    boolean heartbeat_component_vio;
+    boolean heartbeat_component_pairing_manager;
+    boolean heartbeat_component_udp_bridge;
+    boolean heartbeat_component_uart_bridge;
+    boolean open_drone_id_system_healthy;
+    boolean parachute_system_healthy;
+};
+
+}; // dds_
+}; // msg
+}; // px4_msgs

@@ -83,6 +83,13 @@ bool DDSLink::_connect()
         qWarning() << "[DDSLink] Command publisher init failed (commands will not work)";
     }
 
+    // Start periodic GCS heartbeat so PX4 recognises this as a connected GCS
+    if (_heartbeatPublisher.init(_participant, nsPrefix)) {
+        qInfo() << "[DDSLink] GCS heartbeat publisher ready";
+    } else {
+        qWarning() << "[DDSLink] GCS heartbeat init failed (pre-arm GCS check may fail)";
+    }
+
     _pollTimer.start();
 
     _connected = true;
@@ -160,7 +167,8 @@ void DDSLink::disconnect()
 
     _pollTimer.stop();
 
-    // Deinit command publisher before destroying participant
+    // Deinit publishers before destroying participant
+    _heartbeatPublisher.deinit();
     _commandPublisher.deinit();
 
     // Delete readers explicitly before destroying participant

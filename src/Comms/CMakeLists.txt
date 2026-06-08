@@ -133,6 +133,8 @@ if(QGC_ENABLE_DDS)
             ${CMAKE_SOURCE_DIR}/src/DDS/DDSVehicleManager.h
             ${CMAKE_SOURCE_DIR}/src/DDS/DDSCommandPublisher.cc
             ${CMAKE_SOURCE_DIR}/src/DDS/DDSCommandPublisher.h
+            ${CMAKE_SOURCE_DIR}/src/DDS/DDSHeartbeatPublisher.cc
+            ${CMAKE_SOURCE_DIR}/src/DDS/DDSHeartbeatPublisher.h
     )
 
     target_include_directories(${CMAKE_PROJECT_NAME}
