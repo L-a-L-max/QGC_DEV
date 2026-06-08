@@ -60,6 +60,7 @@ public:
     QString             offlineEditingParamFile         (Vehicle* vehicle) const override { Q_UNUSED(vehicle); return QStringLiteral(":/FirmwarePlugin/PX4/PX4.OfflineEditing.params"); }
     QString             autoDisarmParameter             (Vehicle* vehicle) const override { Q_UNUSED(vehicle); return QStringLiteral("COM_DISARM_LAND"); }
     uint32_t            highLatencyCustomModeTo32Bits   (uint16_t hlCustomMode) const override;
+    bool                MAV_CMD_DO_SET_MODE_is_supported () const override { return true; }
     bool                supportsNegativeThrust          (Vehicle* vehicle) const override;
     QString             getHobbsMeter                   (Vehicle* vehicle) const override;
     bool                hasGripper                      (const Vehicle* vehicle) const override;
