@@ -8,6 +8,8 @@
 #include "FactGroup.h"
 #include "QmlObjectListModel.h"
 #include "BatteryFactGroupListModel.h"
+#include "QGCMAVLink.h"
+#include "px4_custom_mode.h"
 
 #include <QtCore/QDebug>
 #include <QtPositioning/QGeoCoordinate>
@@ -221,16 +223,64 @@ void DDSDataInjector::_updateVehicleCoordinate(const QHash<QString, QVariant> &f
     }
 }
 
+static uint32_t _navStateToCustomMode(int navState)
+{
+    // Mirrors PX4's get_px4_custom_mode() — convert nav_state to custom_mode
+    // so that PX4FirmwarePlugin::flightMode() returns the correct string.
+    switch (navState) {
+    case  0: return PX4CustomMode::MANUAL;
+    case  1: return PX4CustomMode::ALTCTL;
+    case  2: return PX4CustomMode::POSCTL_POSCTL;
+    case  3: return PX4CustomMode::AUTO_MISSION;
+    case  4: return PX4CustomMode::AUTO_LOITER;
+    case  5: return PX4CustomMode::AUTO_RTL;
+    case 10: return PX4CustomMode::ACRO;
+    case 12: return PX4CustomMode::AUTO_LAND;       // DESCEND
+    case 14: return PX4CustomMode::OFFBOARD;
+    case 15: return PX4CustomMode::STABILIZED;
+    case 17: return PX4CustomMode::AUTO_TAKEOFF;
+    case 18: return PX4CustomMode::AUTO_LAND;
+    case 19: return PX4CustomMode::AUTO_FOLLOW_TARGET;
+    case 20: return PX4CustomMode::AUTO_PRECLAND;
+    case 21: return PX4CustomMode::POSCTL_ORBIT;
+    default: return 0;
+    }
+}
+
 void DDSDataInjector::_updateVehicleState(const QHash<QString, QVariant> &fields)
 {
     const auto armIt = fields.constFind(QStringLiteral("arming_state"));
     if (armIt != fields.constEnd()) {
         _armingState = armIt->toInt();
+
+        const bool armed = (_armingState == 2);
+        if (_vehicle->_armed != armed) {
+            _vehicle->_armed = armed;
+            emit _vehicle->armedChanged(armed);
+        }
     }
 
     const auto navIt = fields.constFind(QStringLiteral("nav_state"));
     if (navIt != fields.constEnd()) {
-        _navState = navIt->toInt();
+        const int newNavState = navIt->toInt();
+        if (newNavState != _navState) {
+            _navState = newNavState;
+
+            const uint32_t customMode = _navStateToCustomMode(_navState);
+            const uint8_t  baseMode   = MAV_MODE_FLAG_CUSTOM_MODE_ENABLED;
+
+            QString previousFlightMode;
+            if (_vehicle->_base_mode != 0 || _vehicle->_custom_mode != 0) {
+                previousFlightMode = _vehicle->flightMode();
+            }
+            _vehicle->_base_mode   = baseMode;
+            _vehicle->_custom_mode = customMode;
+
+            const QString newFlightMode = _vehicle->flightMode();
+            if (previousFlightMode != newFlightMode) {
+                emit _vehicle->flightModeChanged(newFlightMode);
+            }
+        }
     }
 }
 

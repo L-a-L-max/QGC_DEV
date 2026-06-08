@@ -113,6 +113,7 @@ class Vehicle : public VehicleFactGroup, public VehicleTypes
     friend class RetryableRequestMessageStateTest;  // Unit test
 #endif
     friend class GimbalController;                  // Allow GimbalController to call _addFactGroup
+    friend class DDSDataInjector;                   // Allow DDS to update _base_mode/_custom_mode
 
 public:
     Vehicle(LinkInterface*          link,
