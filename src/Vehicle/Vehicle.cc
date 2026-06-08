@@ -1505,11 +1505,16 @@ void Vehicle::setFlightMode(const QString& flightMode)
         newBaseMode |= base_mode;
 
         if (_firmwarePlugin->MAV_CMD_DO_SET_MODE_is_supported()) {
+            // PX4 DO_SET_MODE expects param2=main_mode, param3=sub_mode
+            // (uint8 each), NOT the full packed custom_mode (uint32).
+            const float main_mode = static_cast<float>((custom_mode >> 16) & 0xFF);
+            const float sub_mode  = static_cast<float>((custom_mode >> 24) & 0xFF);
             sendMavCommand(defaultComponentId(),
                            MAV_CMD_DO_SET_MODE,
                            true,    // show error if fails
                            MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
-                           custom_mode);
+                           main_mode,
+                           sub_mode);
             // Anticipate mode change so _setFlightModeAndValidate sees it
             // immediately. DDS vehicle_status will confirm or correct later.
             _base_mode   = MAV_MODE_FLAG_CUSTOM_MODE_ENABLED;

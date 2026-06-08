@@ -119,7 +119,8 @@ bool DDSCommandPublisher::sendCommand(uint32_t command,
     }
 
     qInfo() << "[DDSCommandPublisher] Sent command" << command
-            << "p1=" << param1 << "p2=" << param2 << "p7=" << param7
+            << "p1=" << param1 << "p2=" << param2 << "p3=" << param3
+            << "p7=" << param7
             << "target=" << targetSystem << "/" << targetComponent;
     emit commandSent(command, param1);
     return true;
