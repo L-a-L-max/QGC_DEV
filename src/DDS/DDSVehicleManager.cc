@@ -106,6 +106,21 @@ void DDSVehicleManager::_createVehicle(int vehicleType)
             vehicle->setDDSCommandPublisher(_link->commandPublisher());
             qInfo() << "[DDSVehicleManager] Attached DDSCommandPublisher to vehicle" << vehicleId;
 
+            // Bridge DDS command ACKs to Vehicle::mavCommandResult so that
+            // PX4FirmwarePlugin's guided-mode flows (takeoff → ACK → arm)
+            // receive the ACK and trigger follow-up actions.
+            DDSDataInjector *injector = _link->dataInjector();
+            connect(injector, &DDSDataInjector::commandAckReceived,
+                    vehicle, [vehicle](uint32_t command, uint8_t result, uint8_t targetSystem) {
+                Q_UNUSED(targetSystem);
+                emit vehicle->mavCommandResult(
+                    vehicle->id(),
+                    0,                                // component (unused)
+                    static_cast<int>(command),
+                    static_cast<int>(result),
+                    0);                               // failureCode
+            });
+
             // Start periodic heartbeat to prevent VehicleLinkManager from
             // declaring communication lost (heartbeat timeout is 3.5s)
             _heartbeatTimer.start(1000);

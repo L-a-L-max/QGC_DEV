@@ -2207,6 +2207,17 @@ void Vehicle::sendCommand(int compId, int command, bool showError, double param1
 
 void Vehicle::sendMavCommandWithHandler(const MavCmdAckHandlerInfo_t* ackHandlerInfo, int compId, MAV_CMD command, float param1, float param2, float param3, float param4, float param5, float param6, float param7)
 {
+#ifdef QGC_ENABLE_DDS
+    if (_ddsCommandPublisher && _ddsCommandPublisher->isReady()) {
+        _ddsCommandPublisher->sendCommand(
+            static_cast<uint32_t>(command),
+            param1, param2, param3, param4,
+            static_cast<double>(param5), static_cast<double>(param6), param7,
+            static_cast<uint8_t>(id()),
+            static_cast<uint8_t>(compId));
+        return;
+    }
+#endif
     _mavCmdQueue->sendCommandWithHandler(ackHandlerInfo, compId, command, param1, param2, param3, param4, param5, param6, param7);
 }
 
@@ -2228,6 +2239,17 @@ void Vehicle::sendMavCommandInt(int compId, MAV_CMD command, MAV_FRAME frame, bo
 
 void Vehicle::sendMavCommandIntWithHandler(const MavCmdAckHandlerInfo_t* ackHandlerInfo, int compId, MAV_CMD command, MAV_FRAME frame, float param1, float param2, float param3, float param4, double param5, double param6, float param7)
 {
+#ifdef QGC_ENABLE_DDS
+    if (_ddsCommandPublisher && _ddsCommandPublisher->isReady()) {
+        _ddsCommandPublisher->sendCommand(
+            static_cast<uint32_t>(command),
+            param1, param2, param3, param4,
+            param5, param6, param7,
+            static_cast<uint8_t>(id()),
+            static_cast<uint8_t>(compId));
+        return;
+    }
+#endif
     _mavCmdQueue->sendCommandIntWithHandler(ackHandlerInfo, compId, command, frame, param1, param2, param3, param4, param5, param6, param7);
 }
 
