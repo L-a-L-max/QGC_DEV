@@ -185,7 +185,7 @@ void DDSVehicleManager::_attachToVehicle(Vehicle *vehicle, const QString &ns)
     vehicle->setDDSCommandPublisher(pub);
     qInfo() << "[DDSVehicleManager] Attached DDSCommandPublisher to vehicle" << vehicle->id()
             << "topic=" << (pub ? pub->topicName() : "null")
-            << "matched=" << (pub ? pub->matchedSubscriptionCount() : -1);
+            << "ready=" << (pub ? pub->isReady() : false);
 
     if (!ns.isEmpty()) {
         vehicle->setCustomName(ns);

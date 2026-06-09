@@ -4,14 +4,18 @@
 
 #include <QtCore/QObject>
 #include <QtCore/QString>
+#include <QtCore/QList>
 
 #include <dds/dds.h>
 
 /// DDSCommandPublisher creates a DDS writer for the vehicle_command topic
 /// and publishes commands to PX4 via DDS.
 ///
-/// This enables QGC to send arm/disarm, mode change, takeoff/land commands
-/// through the DDS link instead of MAVLink.
+/// CycloneDDS has a data-delivery bug when multiple writers of the same type
+/// coexist on the same DDS domain: only the first writer reliably delivers
+/// data.  To work around this, only ONE command writer is kept "active" at
+/// any time.  When a different vehicle needs a command, the previous writer
+/// is destroyed and a new one is created.
 class DDSCommandPublisher : public QObject
 {
     Q_OBJECT
@@ -20,30 +24,23 @@ public:
     explicit DDSCommandPublisher(QObject *parent = nullptr);
     ~DDSCommandPublisher() override;
 
-    /// Initialize the DDS writer. Must be called after participant is created.
-    /// @param participant  CycloneDDS participant entity
-    /// @param namespacePrefix  Topic namespace prefix (e.g. "rt/px4_1/")
-    /// @return true if writer was successfully created
+    /// Initialize the topic and participant reference.
+    /// The writer is created lazily on first sendCommand().
     bool init(dds_entity_t participant, const QString &namespacePrefix);
 
-    /// Cleanup the writer.
+    /// Cleanup everything (writer + topic).
     void deinit();
 
-    /// Whether the writer is initialized and ready to send.
-    bool isReady() const { return _writer > 0; }
+    /// Whether the publisher has been initialized (topic created).
+    bool isReady() const { return _topic > 0 && _participant > 0; }
 
     /// Number of matched subscriptions (PX4 readers) for diagnostics.
     int matchedSubscriptionCount() const;
 
-    /// Topic name this writer publishes to (e.g. "rt/px4_1/fmu/in/vehicle_command").
+    /// Topic name this writer publishes to.
     QString topicName() const { return _topicName; }
 
     /// Send a vehicle command to PX4.
-    /// @param command     MAV_CMD command ID
-    /// @param param1-7    Command parameters
-    /// @param targetSystem   Target system ID (default: 1 = PX4)
-    /// @param targetComponent  Target component ID (default: 1 = autopilot)
-    /// @return true if the write succeeded
     bool sendCommand(uint32_t command,
                      float param1 = 0.0f, float param2 = 0.0f,
                      float param3 = 0.0f, float param4 = 0.0f,
@@ -53,16 +50,21 @@ public:
                      uint8_t targetComponent = 1);
 
 signals:
-    /// Emitted when a command is successfully written to DDS.
     void commandSent(uint32_t command, float param1);
-
-    /// Emitted when a command write fails.
     void commandFailed(uint32_t command, const QString &reason);
 
 private:
-    dds_entity_t _writer = DDS_ENTITY_NIL;
-    dds_entity_t _topic  = DDS_ENTITY_NIL;
+    bool _ensureWriter();
+    void _destroyWriter();
+
+    static void _deactivateOthers(DDSCommandPublisher *active);
+
+    dds_entity_t _writer      = DDS_ENTITY_NIL;
+    dds_entity_t _topic       = DDS_ENTITY_NIL;
+    dds_entity_t _participant = DDS_ENTITY_NIL;
     QString      _topicName;
+
+    static QList<DDSCommandPublisher *> s_instances;
 };
 
 #endif // QGC_ENABLE_DDS

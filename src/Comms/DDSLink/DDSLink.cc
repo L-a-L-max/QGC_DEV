@@ -145,16 +145,12 @@ bool DDSLink::_connect()
                 unmatchedCount++;
             }
         }
-        // Check writer matching for command and heartbeat publishers
-        const int cmdSubs = _commandPublisher.matchedSubscriptionCount();
+        // Check writer matching for heartbeat publisher.
+        // Command writer is created lazily on first send (single-active-writer
+        // workaround for CycloneDDS multi-writer bug).
         const int hbSubs  = _heartbeatPublisher.matchedSubscriptionCount();
-        qInfo() << "[DDSLink] Writer match diagnostic (5s): command_writer→"
-                << cmdSubs << "subscriber(s), heartbeat_writer→"
-                << hbSubs << "subscriber(s)";
-        if (cmdSubs == 0) {
-            qWarning() << "[DDSLink] Command writer has NO matched subscribers!"
-                       << "PX4 will not receive commands.";
-        }
+        qInfo() << "[DDSLink] Writer match diagnostic (5s): heartbeat_writer→"
+                << hbSubs << "subscriber(s), command_writer=lazy";
         if (hbSubs == 0) {
             qWarning() << "[DDSLink] Heartbeat writer has NO matched subscribers!"
                        << "PX4 will report 'Connection to ground station lost'.";
