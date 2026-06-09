@@ -321,8 +321,9 @@ void DDSLink::_destroyParticipant(dds_entity_t participant)
 void DDSLink::_subscribeToTopics(dds_entity_t participant, const QStringList &topicNames)
 {
     const DDSConfiguration *config = _ddsConfig();
-    const QString prefix = config ? config->namespacePrefix() : QString();
-    const QString rtPrefix = prefix.isEmpty() ? QStringLiteral("rt") : prefix;
+    const QString ns = config ? config->namespacePrefix() : QString();
+    const QString rtPrefix = ns.isEmpty() ? QStringLiteral("rt")
+                                          : QStringLiteral("rt/") + ns;
 
     int typedCount = 0;
     int stubCount = 0;

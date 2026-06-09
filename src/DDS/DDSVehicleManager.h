@@ -42,6 +42,7 @@ private:
     void _createVehicle(int vehicleType);
     void _emitSyntheticHeartbeat();
     static uint32_t _navStateToCustomMode(int navState);
+    static int _nextVehicleId();
 
     DDSLink *_link = nullptr;
     bool     _vehicleCreated = false;

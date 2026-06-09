@@ -11,6 +11,7 @@
 
 #include <QtCore/QDebug>
 #include <QtCore/QTimer>
+#include <QtCore/QAtomicInt>
 
 #include <mavlink.h>
 
@@ -72,8 +73,7 @@ void DDSVehicleManager::_createVehicle(int vehicleType)
     default: mavType = MAV_TYPE_QUADROTOR;      break;
     }
 
-    // Use vehicle ID 1 for the DDS vehicle (standard PX4 SITL ID)
-    constexpr int vehicleId = 1;
+    const int vehicleId = _nextVehicleId();
     constexpr int componentId = MAV_COMP_ID_AUTOPILOT1;
 
     _vehicleId = vehicleId;
@@ -162,6 +162,14 @@ void DDSVehicleManager::_emitSyntheticHeartbeat()
         MAV_STATE_ACTIVE);
 
     emit MAVLinkProtocol::instance()->messageReceived(_link, msg);
+}
+
+int DDSVehicleManager::_nextVehicleId()
+{
+    // Atomic counter starting at 1, incremented for each DDS vehicle.
+    // This avoids collisions when multiple DDSLinks create vehicles.
+    static QAtomicInt sCounter(1);
+    return sCounter.fetchAndAddRelaxed(1);
 }
 
 uint32_t DDSVehicleManager::_navStateToCustomMode(int navState)

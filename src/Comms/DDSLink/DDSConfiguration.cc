@@ -1,6 +1,7 @@
 #ifdef QGC_ENABLE_DDS
 
 #include "DDSConfiguration.h"
+#include "DDSDiscovery.h"
 
 DDSConfiguration::DDSConfiguration(const QString &name, QObject *parent)
     : LinkConfiguration(name, parent)
@@ -16,7 +17,10 @@ DDSConfiguration::DDSConfiguration(const DDSConfiguration *copy, QObject *parent
 {
 }
 
-DDSConfiguration::~DDSConfiguration() = default;
+DDSConfiguration::~DDSConfiguration()
+{
+    stopDiscovery();
+}
 
 void DDSConfiguration::setDomainId(int id)
 {
@@ -47,6 +51,43 @@ void DDSConfiguration::setAutoDiscover(bool enabled)
     if (_autoDiscover != enabled) {
         _autoDiscover = enabled;
         emit autoDiscoverChanged();
+    }
+}
+
+void DDSConfiguration::startDiscovery()
+{
+    if (_discovering) {
+        return;
+    }
+
+    if (!_discovery) {
+        _discovery = new DDSDiscovery(this);
+        connect(_discovery, &DDSDiscovery::namespacesUpdated,
+                this, &DDSConfiguration::_onNamespacesUpdated);
+    }
+
+    _discovering = true;
+    emit discoveringChanged();
+
+    _discovery->startDiscovery(_domainId);
+}
+
+void DDSConfiguration::stopDiscovery()
+{
+    if (_discovery) {
+        _discovery->stopDiscovery();
+    }
+    if (_discovering) {
+        _discovering = false;
+        emit discoveringChanged();
+    }
+}
+
+void DDSConfiguration::_onNamespacesUpdated(const QStringList &namespaces)
+{
+    if (_discoveredNamespaces != namespaces) {
+        _discoveredNamespaces = namespaces;
+        emit discoveredNamespacesChanged();
     }
 }
 
