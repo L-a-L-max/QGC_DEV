@@ -145,12 +145,11 @@ bool DDSLink::_connect()
                 unmatchedCount++;
             }
         }
-        // Check writer matching for heartbeat publisher.
-        // Command writer is created lazily on first send (single-active-writer
-        // workaround for CycloneDDS multi-writer bug).
         const int hbSubs  = _heartbeatPublisher.matchedSubscriptionCount();
+        const int cmdSubs = _commandPublisher.matchedSubscriptionCount();
         qInfo() << "[DDSLink] Writer match diagnostic (5s): heartbeat_writer→"
-                << hbSubs << "subscriber(s), command_writer=lazy";
+                << hbSubs << "subscriber(s), command_writer→"
+                << cmdSubs << "subscriber(s)";
         if (hbSubs == 0) {
             qWarning() << "[DDSLink] Heartbeat writer has NO matched subscribers!"
                        << "PX4 will report 'Connection to ground station lost'.";

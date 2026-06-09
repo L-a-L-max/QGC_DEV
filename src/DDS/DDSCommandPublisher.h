@@ -4,18 +4,14 @@
 
 #include <QtCore/QObject>
 #include <QtCore/QString>
-#include <QtCore/QList>
-
 #include <dds/dds.h>
 
 /// DDSCommandPublisher creates a DDS writer for the vehicle_command topic
 /// and publishes commands to PX4 via DDS.
 ///
-/// CycloneDDS has a data-delivery bug when multiple writers of the same type
-/// coexist on the same DDS domain: only the first writer reliably delivers
-/// data.  To work around this, only ONE command writer is kept "active" at
-/// any time.  When a different vehicle needs a command, the previous writer
-/// is destroyed and a new one is created.
+/// Uses BEST_EFFORT + VOLATILE QoS to match PX4's XRCE-DDS reader QoS.
+/// Writer is created immediately in init() and kept alive (same pattern as
+/// DDSHeartbeatPublisher, which works for all multi-vehicle namespaces).
 class DDSCommandPublisher : public QObject
 {
     Q_OBJECT
@@ -24,8 +20,7 @@ public:
     explicit DDSCommandPublisher(QObject *parent = nullptr);
     ~DDSCommandPublisher() override;
 
-    /// Initialize the topic and participant reference.
-    /// The writer is created lazily on first sendCommand().
+    /// Initialize topic and writer immediately.
     bool init(dds_entity_t participant, const QString &namespacePrefix);
 
     /// Cleanup everything (writer + topic).
@@ -54,17 +49,10 @@ signals:
     void commandFailed(uint32_t command, const QString &reason);
 
 private:
-    bool _ensureWriter();
-    void _destroyWriter();
-
-    static void _deactivateOthers(DDSCommandPublisher *active);
-
     dds_entity_t _writer      = DDS_ENTITY_NIL;
     dds_entity_t _topic       = DDS_ENTITY_NIL;
     dds_entity_t _participant = DDS_ENTITY_NIL;
     QString      _topicName;
-
-    static QList<DDSCommandPublisher *> s_instances;
 };
 
 #endif // QGC_ENABLE_DDS

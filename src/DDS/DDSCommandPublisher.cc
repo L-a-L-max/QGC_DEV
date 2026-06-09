@@ -5,29 +5,24 @@
 
 #include <QtCore/QDebug>
 #include <QtCore/QDateTime>
-#include <QtCore/QElapsedTimer>
 
 #include <cstring>
 
 Q_LOGGING_CATEGORY(DDSCommandPublisherLog, "DDSCommandPublisherLog")
 
-QList<DDSCommandPublisher *> DDSCommandPublisher::s_instances;
-
 DDSCommandPublisher::DDSCommandPublisher(QObject *parent)
     : QObject(parent)
 {
-    s_instances.append(this);
 }
 
 DDSCommandPublisher::~DDSCommandPublisher()
 {
     deinit();
-    s_instances.removeAll(this);
 }
 
 bool DDSCommandPublisher::init(dds_entity_t participant, const QString &namespacePrefix)
 {
-    if (_topic > 0) {
+    if (_writer > 0) {
         return true;
     }
 
@@ -47,38 +42,17 @@ bool DDSCommandPublisher::init(dds_entity_t participant, const QString &namespac
         return false;
     }
 
-    qInfo() << "[DDSCommandPublisher] Initialized for topic:" << _topicName
-            << "(writer created on first command)";
-    return true;
-}
-
-void DDSCommandPublisher::_destroyWriter()
-{
-    if (_writer > 0) {
-        dds_delete(_writer);
-        _writer = DDS_ENTITY_NIL;
-    }
-}
-
-bool DDSCommandPublisher::_ensureWriter()
-{
-    if (_writer > 0) {
-        return true;
-    }
-    if (_participant <= 0 || _topic <= 0) {
-        return false;
-    }
-
-    // Use RELIABLE + VOLATILE QoS.  Non-default PX4 instances (px4_2, px4_3)
-    // create RELIABLE readers via the XRCE-DDS Agent; a BEST_EFFORT writer
-    // "matches" in CycloneDDS but data is silently dropped.  VOLATILE avoids
-    // stale command replay on late-joining readers.
+    // BEST_EFFORT + VOLATILE — matches PX4's XRCE-DDS reader QoS exactly.
+    // Same QoS as DDSHeartbeatPublisher, which delivers to all 3 namespaces.
+    // RELIABLE writers fail to deliver to non-default PX4 instances because
+    // the XRCE-DDS Agent's built-in RTPS does not correctly route RELIABLE
+    // data to multiple BEST_EFFORT readers of the same type.
     dds_qos_t *qos = dds_create_qos();
-    dds_qset_reliability(qos, DDS_RELIABILITY_RELIABLE, DDS_SECS(1));
+    dds_qset_reliability(qos, DDS_RELIABILITY_BEST_EFFORT, 0);
     dds_qset_durability(qos, DDS_DURABILITY_VOLATILE);
     dds_qset_history(qos, DDS_HISTORY_KEEP_LAST, 1);
 
-    _writer = dds_create_writer(_participant, _topic, qos, nullptr);
+    _writer = dds_create_writer(participant, _topic, qos, nullptr);
     dds_delete_qos(qos);
 
     if (_writer < 0) {
@@ -87,46 +61,17 @@ bool DDSCommandPublisher::_ensureWriter()
         return false;
     }
 
-    // Wait for RTPS endpoint discovery to match the writer with PX4's reader.
-    // Poll every 50ms for up to 2 seconds.
-    QElapsedTimer timer;
-    timer.start();
-    while (timer.elapsed() < 2000) {
-        const int n = matchedSubscriptionCount();
-        if (n > 0) {
-            dds_instance_handle_t handles[4];
-            const int nh = dds_get_matched_subscriptions(_writer, handles, 4);
-            QString hstr;
-            for (int i = 0; i < nh && i < 4; ++i) {
-                if (!hstr.isEmpty()) hstr += ',';
-                hstr += QString::number(static_cast<quint64>(handles[i]), 16);
-            }
-            qInfo() << "[DDSCommandPublisher] Writer matched on" << _topicName
-                    << "in" << timer.elapsed() << "ms"
-                    << "writer=" << _writer << "handles=[" << hstr << "]";
-            return true;
-        }
-        dds_sleepfor(DDS_MSECS(50));
-    }
-
-    qCWarning(DDSCommandPublisherLog)
-        << "Writer created but no matched subscription after 2s on" << _topicName;
-    return true;  // proceed anyway — match may arrive later
-}
-
-void DDSCommandPublisher::_deactivateOthers(DDSCommandPublisher *active)
-{
-    for (DDSCommandPublisher *pub : s_instances) {
-        if (pub != active) {
-            pub->_destroyWriter();
-        }
-    }
+    qInfo() << "[DDSCommandPublisher] Initialized writer on" << _topicName
+            << "writer=" << _writer;
+    return true;
 }
 
 void DDSCommandPublisher::deinit()
 {
-    _destroyWriter();
-
+    if (_writer > 0) {
+        dds_delete(_writer);
+        _writer = DDS_ENTITY_NIL;
+    }
     if (_topic > 0) {
         dds_delete(_topic);
         _topic = DDS_ENTITY_NIL;
@@ -150,7 +95,7 @@ bool DDSCommandPublisher::sendCommand(uint32_t command,
                                       uint8_t targetSystem,
                                       uint8_t targetComponent)
 {
-    if (_participant <= 0 || _topic <= 0) {
+    if (_writer <= 0) {
         const QString reason = QStringLiteral("Publisher not initialized");
         qCWarning(DDSCommandPublisherLog) << "Cannot send command" << command << ":" << reason;
         emit commandFailed(command, reason);
@@ -160,18 +105,6 @@ bool DDSCommandPublisher::sendCommand(uint32_t command,
     // PX4's DDS interface does not support MAV_CMD_REQUEST_MESSAGE (512).
     if (command == 512) {
         return true;
-    }
-
-    // Ensure only ONE command writer exists across all DDSLinks.
-    // CycloneDDS silently drops data from the 2nd+ writer of the same type
-    // on the same domain (even across separate participants).
-    _deactivateOthers(this);
-
-    if (!_ensureWriter()) {
-        const QString reason = QStringLiteral("Failed to create writer");
-        qCWarning(DDSCommandPublisherLog) << "Cannot send command" << command << ":" << reason;
-        emit commandFailed(command, reason);
-        return false;
     }
 
     px4_msgs_msg_dds__VehicleCommand_ msg;
