@@ -69,8 +69,12 @@ bool DDSCommandPublisher::_ensureWriter()
         return false;
     }
 
+    // Use RELIABLE + VOLATILE QoS.  Non-default PX4 instances (px4_2, px4_3)
+    // create RELIABLE readers via the XRCE-DDS Agent; a BEST_EFFORT writer
+    // "matches" in CycloneDDS but data is silently dropped.  VOLATILE avoids
+    // stale command replay on late-joining readers.
     dds_qos_t *qos = dds_create_qos();
-    dds_qset_reliability(qos, DDS_RELIABILITY_BEST_EFFORT, 0);
+    dds_qset_reliability(qos, DDS_RELIABILITY_RELIABLE, DDS_SECS(1));
     dds_qset_durability(qos, DDS_DURABILITY_VOLATILE);
     dds_qset_history(qos, DDS_HISTORY_KEEP_LAST, 1);
 
@@ -84,20 +88,29 @@ bool DDSCommandPublisher::_ensureWriter()
     }
 
     // Wait for RTPS endpoint discovery to match the writer with PX4's reader.
-    // Poll every 50ms for up to 1 second.
+    // Poll every 50ms for up to 2 seconds.
     QElapsedTimer timer;
     timer.start();
-    while (timer.elapsed() < 1000) {
-        if (matchedSubscriptionCount() > 0) {
+    while (timer.elapsed() < 2000) {
+        const int n = matchedSubscriptionCount();
+        if (n > 0) {
+            dds_instance_handle_t handles[4];
+            const int nh = dds_get_matched_subscriptions(_writer, handles, 4);
+            QString hstr;
+            for (int i = 0; i < nh && i < 4; ++i) {
+                if (!hstr.isEmpty()) hstr += ',';
+                hstr += QString::number(static_cast<quint64>(handles[i]), 16);
+            }
             qInfo() << "[DDSCommandPublisher] Writer matched on" << _topicName
-                    << "in" << timer.elapsed() << "ms";
+                    << "in" << timer.elapsed() << "ms"
+                    << "writer=" << _writer << "handles=[" << hstr << "]";
             return true;
         }
         dds_sleepfor(DDS_MSECS(50));
     }
 
     qCWarning(DDSCommandPublisherLog)
-        << "Writer created but no matched subscription after 1s on" << _topicName;
+        << "Writer created but no matched subscription after 2s on" << _topicName;
     return true;  // proceed anyway — match may arrive later
 }
 
