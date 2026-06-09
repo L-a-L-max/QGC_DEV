@@ -97,6 +97,13 @@ bool DDSCommandPublisher::sendCommand(uint32_t command,
         return false;
     }
 
+    // PX4's DDS interface does not support MAV_CMD_REQUEST_MESSAGE (512).
+    // Silently drop these to avoid infinite retry loops from components
+    // like GimbalController and StandardModes that expect MAVLink ACKs.
+    if (command == 512) {
+        return true;
+    }
+
     px4_msgs_msg_dds__VehicleCommand_ msg;
     memset(&msg, 0, sizeof(msg));
 

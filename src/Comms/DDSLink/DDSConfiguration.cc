@@ -107,6 +107,14 @@ dds_entity_t DDSConfiguration::takeDiscoveryParticipant()
     return p;
 }
 
+void DDSConfiguration::returnParticipant(dds_entity_t participant)
+{
+    if (participant > 0) {
+        _pendingParticipant = participant;
+        qInfo() << "[DDSConfiguration] Saved participant" << participant << "for reuse";
+    }
+}
+
 void DDSConfiguration::_onNamespacesUpdated(const QStringList &namespaces)
 {
     if (_discoveredNamespaces != namespaces) {

@@ -7,6 +7,7 @@
 #include "LinkInterface.h"
 #include "MAVLinkProtocol.h"
 #include "MultiVehicleManager.h"
+#include "QmlObjectListModel.h"
 #include "Vehicle.h"
 #include "FirmwarePlugin/PX4/px4_custom_mode.h"
 
@@ -74,6 +75,19 @@ void DDSVehicleManager::_createVehicle(int vehicleType)
     default: mavType = MAV_TYPE_QUADROTOR;      break;
     }
 
+    // Check if a Vehicle with the same namespace already exists (reconnect case)
+    auto *ddsConfig = qobject_cast<DDSConfiguration *>(_link->linkConfiguration().get());
+    const QString nsPrefix = ddsConfig ? ddsConfig->namespacePrefix() : QString();
+    Vehicle *existing = _findVehicleByNamespace(nsPrefix);
+    if (existing) {
+        _vehicleId = existing->id();
+        _mavType = mavType;
+        qInfo() << "[DDSVehicleManager] Reusing existing vehicle" << _vehicleId
+                << "for namespace" << nsPrefix;
+        _attachToVehicle(existing, nsPrefix);
+        return;
+    }
+
     const int vehicleId = _nextVehicleId();
     constexpr int componentId = MAV_COMP_ID_AUTOPILOT1;
 
@@ -90,7 +104,7 @@ void DDSVehicleManager::_createVehicle(int vehicleType)
         _link, vehicleId, componentId, MAV_AUTOPILOT_PX4, mavType);
 
     // Defer vehicle attachment to let MultiVehicleManager process the heartbeat
-    QTimer::singleShot(100, this, [this, vehicleId]() {
+    QTimer::singleShot(100, this, [this, vehicleId, nsPrefix]() {
         MultiVehicleManager *mgr = MultiVehicleManager::instance();
         if (!mgr) {
             qWarning() << "[DDSVehicleManager] MultiVehicleManager not available";
@@ -100,39 +114,7 @@ void DDSVehicleManager::_createVehicle(int vehicleType)
 
         Vehicle *vehicle = mgr->getVehicleById(vehicleId);
         if (vehicle) {
-            _link->dataInjector()->setVehicle(vehicle);
-            qInfo() << "[DDSVehicleManager] Attached DDSDataInjector to vehicle" << vehicleId;
-
-            // Attach DDS command publisher so Vehicle can send commands via DDS
-            vehicle->setDDSCommandPublisher(_link->commandPublisher());
-            qInfo() << "[DDSVehicleManager] Attached DDSCommandPublisher to vehicle" << vehicleId;
-
-            // Set namespace as vehicle display name
-            auto *ddsConfig = qobject_cast<DDSConfiguration *>(_link->linkConfiguration().get());
-            if (ddsConfig && !ddsConfig->namespacePrefix().isEmpty()) {
-                vehicle->setCustomName(ddsConfig->namespacePrefix());
-                qInfo() << "[DDSVehicleManager] Vehicle" << vehicleId
-                        << "display name:" << ddsConfig->namespacePrefix();
-            }
-
-            // Bridge DDS command ACKs to Vehicle::mavCommandResult so that
-            // PX4FirmwarePlugin's guided-mode flows (takeoff → ACK → arm)
-            // receive the ACK and trigger follow-up actions.
-            DDSDataInjector *injector = _link->dataInjector();
-            connect(injector, &DDSDataInjector::commandAckReceived,
-                    vehicle, [vehicle](uint32_t command, uint8_t result, uint8_t targetSystem) {
-                Q_UNUSED(targetSystem);
-                emit vehicle->mavCommandResult(
-                    vehicle->id(),
-                    0,                                // component (unused)
-                    static_cast<int>(command),
-                    static_cast<int>(result),
-                    0);                               // failureCode
-            });
-
-            // Start periodic heartbeat to prevent VehicleLinkManager from
-            // declaring communication lost (heartbeat timeout is 3.5s)
-            _heartbeatTimer.start(1000);
+            _attachToVehicle(vehicle, nsPrefix);
         } else {
             qWarning() << "[DDSVehicleManager] Vehicle" << vehicleId << "not found after creation";
             _vehicleCreated = false;
@@ -173,10 +155,56 @@ void DDSVehicleManager::_emitSyntheticHeartbeat()
     emit MAVLinkProtocol::instance()->messageReceived(_link, msg);
 }
 
+Vehicle *DDSVehicleManager::_findVehicleByNamespace(const QString &ns) const
+{
+    if (ns.isEmpty()) {
+        return nullptr;
+    }
+    MultiVehicleManager *mgr = MultiVehicleManager::instance();
+    if (!mgr) {
+        return nullptr;
+    }
+    QmlObjectListModel *vehicles = mgr->vehicles();
+    for (int i = 0; i < vehicles->count(); ++i) {
+        Vehicle *v = qobject_cast<Vehicle *>((*vehicles)[i]);
+        if (v && v->customName() == ns) {
+            return v;
+        }
+    }
+    return nullptr;
+}
+
+void DDSVehicleManager::_attachToVehicle(Vehicle *vehicle, const QString &ns)
+{
+    _link->dataInjector()->setVehicle(vehicle);
+    qInfo() << "[DDSVehicleManager] Attached DDSDataInjector to vehicle" << vehicle->id();
+
+    vehicle->setDDSCommandPublisher(_link->commandPublisher());
+    qInfo() << "[DDSVehicleManager] Attached DDSCommandPublisher to vehicle" << vehicle->id();
+
+    if (!ns.isEmpty()) {
+        vehicle->setCustomName(ns);
+        qInfo() << "[DDSVehicleManager] Vehicle" << vehicle->id()
+                << "display name:" << ns;
+    }
+
+    DDSDataInjector *injector = _link->dataInjector();
+    connect(injector, &DDSDataInjector::commandAckReceived,
+            vehicle, [vehicle](uint32_t command, uint8_t result, uint8_t targetSystem) {
+        Q_UNUSED(targetSystem);
+        emit vehicle->mavCommandResult(
+            vehicle->id(),
+            0,
+            static_cast<int>(command),
+            static_cast<int>(result),
+            0);
+    });
+
+    _heartbeatTimer.start(1000);
+}
+
 int DDSVehicleManager::_nextVehicleId()
 {
-    // Atomic counter starting at 1, incremented for each DDS vehicle.
-    // This avoids collisions when multiple DDSLinks create vehicles.
     static QAtomicInt sCounter(1);
     return sCounter.fetchAndAddRelaxed(1);
 }

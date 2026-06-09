@@ -59,6 +59,10 @@ public:
     /// Returns DDS_ENTITY_NIL if no participant is available.
     dds_entity_t takeDiscoveryParticipant();
 
+    /// Store a participant back into this config so it can be reused
+    /// on the next DDSLink::_connect() call (e.g. after disconnect/reconnect).
+    void returnParticipant(dds_entity_t participant);
+
     // LinkConfiguration overrides
     LinkType type() const override { return TypeDDS; }
     void copyFrom(const LinkConfiguration *source) override;

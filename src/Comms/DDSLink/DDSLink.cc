@@ -206,7 +206,14 @@ void DDSLink::disconnect()
     _receivedTopics.clear();
 
     if (_participant > 0) {
-        _destroyParticipant(_participant);
+        // Save participant back to config for reuse on reconnect
+        // instead of destroying it (avoids RTPS re-discovery delay).
+        DDSConfiguration *cfg = _ddsConfig();
+        if (cfg) {
+            cfg->returnParticipant(_participant);
+        } else {
+            _destroyParticipant(_participant);
+        }
         _participant = DDS_ENTITY_NIL;
     }
 
