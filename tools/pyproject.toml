@@ -32,7 +32,7 @@ dev = [
   "jinja2",
   "pyyaml",
   "pymavlink",
-  "rust-just>=1.30",
+  "rust-just>=1.52.0",
 ]
 lsp = [
   "pygls",
