@@ -13,15 +13,7 @@ RowLayout {
     property bool   showIndicator:        _multipleVehicles
     property var    _activeVehicle:       QGroundControl.multiVehicleManager.activeVehicle
     property bool   _multipleVehicles:    QGroundControl.multiVehicleManager.vehicles.count > 1
-    property var    _vehicleModel:        [ ]
-
-    Connections {
-        target:         QGroundControl.multiVehicleManager.vehicles
-        function onCountChanged(count) { _updateVehicleModel() }
-    }
-
-    Component.onCompleted:      _updateVehicleModel()
-    on_ActiveVehicleChanged:    _updateVehicleModel()
+    
 
     RowLayout {
         Layout.fillWidth: true
@@ -36,7 +28,7 @@ RowLayout {
         }
 
         QGCLabel {
-            text:               _activeVehicle ? qsTr("Vehicle") + " " + _activeVehicle.id : qsTr("N/A")
+            text:               _activeVehicle ? (_activeVehicle.customName.length > 0 ? _activeVehicle.customName : qsTr("Vehicle") + " " + _activeVehicle.id) : qsTr("N/A")
             font.pointSize:     ScreenTools.mediumFontPointSize
             Layout.alignment:   Qt.AlignCenter
 
@@ -58,16 +50,14 @@ RowLayout {
                     spacing: ScreenTools.defaultFontPixelWidth / 2
 
                     Repeater {
-                        model: _vehicleModel
+                        model: QGroundControl.multiVehicleManager.vehicles
 
                         QGCButton {
-                            text:               modelData
+                            text:               object.customName.length > 0 ? object.customName : qsTr("Vehicle") + " " + object.id
                             Layout.fillWidth:   true
 
                             onClicked: {
-                                var vehicleId = modelData.split(" ")[1]
-                                var vehicle = QGroundControl.multiVehicleManager.getVehicleById(vehicleId)
-                                QGroundControl.multiVehicleManager.activeVehicle = vehicle
+                                QGroundControl.multiVehicleManager.activeVehicle = object
                                 mainWindow.closeIndicatorDrawer()
                             }
                         }
@@ -92,14 +82,4 @@ RowLayout {
         }
     }
 
-    function _updateVehicleModel() {
-        var newModel = [ ]
-        if (_multipleVehicles) {
-            for (var i = 0; i < QGroundControl.multiVehicleManager.vehicles.count; i++) {
-                var vehicle = QGroundControl.multiVehicleManager.vehicles.get(i)
-                newModel.push(vehicle.customName.length > 0 ? vehicle.customName : qsTr("Vehicle") + " " + vehicle.id)
-            }
-        }
-        _vehicleModel = newModel
-    }
 }
