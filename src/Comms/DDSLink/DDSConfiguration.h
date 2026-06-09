@@ -53,16 +53,6 @@ public:
     /// Stop an active discovery scan.
     Q_INVOKABLE void stopDiscovery();
 
-    /// Release the discovery participant for reuse by DDSLink.
-    /// Checks _pendingParticipant (set during copyFrom) first, then
-    /// falls back to the live DDSDiscovery instance.
-    /// Returns DDS_ENTITY_NIL if no participant is available.
-    dds_entity_t takeDiscoveryParticipant();
-
-    /// Store a participant back into this config so it can be reused
-    /// on the next DDSLink::_connect() call (e.g. after disconnect/reconnect).
-    void returnParticipant(dds_entity_t participant);
-
     // LinkConfiguration overrides
     LinkType type() const override { return TypeDDS; }
     void copyFrom(const LinkConfiguration *source) override;
@@ -91,9 +81,6 @@ private:
     bool        _discovering     = false;
 
     DDSDiscovery *_discovery = nullptr;
-
-    /// Participant transferred from the edit-copy config during copyFrom().
-    dds_entity_t _pendingParticipant = DDS_ENTITY_NIL;
 };
 
 #endif // QGC_ENABLE_DDS

@@ -20,10 +20,6 @@ DDSConfiguration::DDSConfiguration(const DDSConfiguration *copy, QObject *parent
 DDSConfiguration::~DDSConfiguration()
 {
     stopDiscovery();
-    if (_pendingParticipant > 0) {
-        dds_delete(_pendingParticipant);
-        _pendingParticipant = DDS_ENTITY_NIL;
-    }
 }
 
 void DDSConfiguration::setDomainId(int id)
@@ -87,33 +83,6 @@ void DDSConfiguration::stopDiscovery()
     }
 }
 
-dds_entity_t DDSConfiguration::takeDiscoveryParticipant()
-{
-    // Prefer the participant transferred from the edit-copy during copyFrom()
-    if (_pendingParticipant > 0) {
-        dds_entity_t p = _pendingParticipant;
-        _pendingParticipant = DDS_ENTITY_NIL;
-        qInfo() << "[DDSConfiguration] Providing pending participant:" << p;
-        return p;
-    }
-    if (!_discovery) {
-        return DDS_ENTITY_NIL;
-    }
-    dds_entity_t p = _discovery->releaseParticipant();
-    if (_discovering) {
-        _discovering = false;
-        emit discoveringChanged();
-    }
-    return p;
-}
-
-void DDSConfiguration::returnParticipant(dds_entity_t participant)
-{
-    if (participant > 0) {
-        _pendingParticipant = participant;
-        qInfo() << "[DDSConfiguration] Saved participant" << participant << "for reuse";
-    }
-}
 
 void DDSConfiguration::_onNamespacesUpdated(const QStringList &namespaces)
 {
@@ -133,16 +102,6 @@ void DDSConfiguration::copyFrom(const LinkConfiguration *source)
         setVendorMapping(ddsSource->vendorMapping());
         setNamespacePrefix(ddsSource->namespacePrefix());
         setAutoDiscover(ddsSource->autoDiscover());
-
-        // Transfer the discovery participant so DDSLink can reuse it
-        // instead of creating a new one (avoids RTPS re-discovery delay).
-        if (ddsSource->_discovery) {
-            _pendingParticipant = ddsSource->_discovery->releaseParticipant();
-            if (_pendingParticipant > 0) {
-                qInfo() << "[DDSConfiguration] Transferred participant"
-                        << _pendingParticipant << "from edit config";
-            }
-        }
     }
 }
 

@@ -8,6 +8,15 @@
 
 QGC_LOGGING_CATEGORY_ON(DDSLinkLog, "Comms.DDSLink")
 
+// --- Shared participant pool (one participant per DDS domain) ---
+// CycloneDDS does not reliably deliver data when multiple participants
+// in the same process share a domain — match diagnostics report correct
+// values but actual UDP delivery fails for participants created after
+// the first.  All DDSLinks (and DDSDiscovery) on the same domain must
+// use a single shared participant.
+QHash<int, dds_entity_t> DDSLink::s_domainParticipants;
+QHash<int, int>          DDSLink::s_domainRefCounts;
+
 DDSLink::DDSLink(SharedLinkConfigurationPtr &config, QObject *parent)
     : LinkInterface(config, parent)
     , _dataInjector(&_mappingEngine, &_transformRegistry, this)
@@ -57,21 +66,17 @@ bool DDSLink::_connect()
              << "topics:" << _mappingEngine.topicCount()
              << "fields:" << _mappingEngine.fieldCount();
 
-    // Try to reuse the discovery participant instead of creating a new one.
-    // This avoids RTPS re-discovery delays and potential writer-matching issues
-    // caused by destroying and recreating participants on the same domain.
-    DDSConfiguration *mutableConfig = const_cast<DDSConfiguration *>(config);
-    _participant = mutableConfig->takeDiscoveryParticipant();
-    if (_participant > 0) {
-        qInfo() << "[DDSLink] Reusing discovery participant on domain"
-                << config->domainId() << "entity:" << _participant;
-    } else {
-        _participant = _createParticipant(config->domainId());
-        if (_participant < 0) {
-            emit communicationError(tr("DDS Link"), tr("Failed to create DDS participant"));
-            return false;
-        }
+    // Use the domain-wide shared participant.  All DDSLinks on the same
+    // domain share one CycloneDDS participant to avoid the multi-participant
+    // data-delivery bug (see s_domainParticipants comment above).
+    _domainId = config->domainId();
+    _participant = acquireSharedParticipant(_domainId);
+    if (_participant <= 0) {
+        emit communicationError(tr("DDS Link"), tr("Failed to create DDS participant"));
+        return false;
     }
+    qInfo() << "[DDSLink] Using shared participant on domain"
+            << _domainId << "entity:" << _participant;
 
     if (config->autoDiscover()) {
         const QStringList discovered = _runDiscovery(_participant);
@@ -205,14 +210,11 @@ void DDSLink::disconnect()
     _readers.clear();
     _receivedTopics.clear();
 
-    if (_participant > 0) {
-        // Always destroy the participant on disconnect.  CycloneDDS does
-        // not reliably deliver data after all readers/writers on a
-        // participant have been deleted and new ones are created — the
-        // RTPS endpoint state gets stale even though local match
-        // diagnostics report success.  A fresh participant on reconnect
-        // is the only reliable path.
-        _destroyParticipant(_participant);
+    // Release our reference to the shared domain participant.
+    // The participant is only destroyed when the last link on this domain
+    // disconnects — other links' readers/writers keep it alive.
+    if (_participant > 0 && _domainId >= 0) {
+        releaseSharedParticipant(_domainId);
         _participant = DDS_ENTITY_NIL;
     }
 
@@ -346,6 +348,103 @@ void DDSLink::_destroyParticipant(dds_entity_t participant)
         qCWarning(DDSLinkLog) << "dds_delete(participant) failed:" << dds_strretcode(-rc);
     } else {
         qCDebug(DDSLinkLog) << "Destroyed DDS participant" << participant;
+    }
+}
+
+dds_entity_t DDSLink::acquireSharedParticipant(int domainId)
+{
+    auto it = s_domainParticipants.find(domainId);
+    if (it != s_domainParticipants.end() && *it > 0) {
+        s_domainRefCounts[domainId]++;
+        qInfo() << "[DDSLink] Reusing shared participant on domain" << domainId
+                << "entity:" << *it << "refcount:" << s_domainRefCounts[domainId];
+        return *it;
+    }
+
+    // No shared participant yet — build CycloneDDS config and create one.
+    if (qEnvironmentVariableIsEmpty("CYCLONEDDS_URI")) {
+        QString interfacesXml;
+        const auto allIfaces = QNetworkInterface::allInterfaces();
+        for (const QNetworkInterface &iface : allIfaces) {
+            if (!(iface.flags() & QNetworkInterface::IsUp)) continue;
+            if (iface.flags() & QNetworkInterface::IsLoopBack) continue;
+            const QString name = iface.name();
+            if (name.startsWith(QStringLiteral("docker")) ||
+                name.startsWith(QStringLiteral("br-")) ||
+                name.startsWith(QStringLiteral("veth")) ||
+                name.startsWith(QStringLiteral("virbr"))) {
+                continue;
+            }
+            bool hasIpv4 = false;
+            for (const QNetworkAddressEntry &entry : iface.addressEntries()) {
+                if (entry.ip().protocol() == QAbstractSocket::IPv4Protocol) {
+                    hasIpv4 = true;
+                    break;
+                }
+            }
+            if (!hasIpv4) continue;
+            interfacesXml += QStringLiteral("        <NetworkInterface name=\"%1\" multicast=\"true\"/>\n").arg(name);
+        }
+
+        QString config;
+        if (interfacesXml.isEmpty()) {
+            config = QStringLiteral(
+                "<CycloneDDS>"
+                "  <Domain id=\"any\">"
+                "    <Compatibility>"
+                "      <StandardsConformance>lax</StandardsConformance>"
+                "    </Compatibility>"
+                "  </Domain>"
+                "</CycloneDDS>");
+        } else {
+            config = QStringLiteral(
+                "<CycloneDDS>"
+                "  <Domain id=\"any\">"
+                "    <General>"
+                "      <Interfaces>\n%1"
+                "      </Interfaces>"
+                "    </General>"
+                "    <Compatibility>"
+                "      <StandardsConformance>lax</StandardsConformance>"
+                "    </Compatibility>"
+                "  </Domain>"
+                "</CycloneDDS>").arg(interfacesXml);
+        }
+        qputenv("CYCLONEDDS_URI", config.toUtf8());
+    }
+
+    const dds_entity_t p = dds_create_participant(
+        static_cast<dds_domainid_t>(domainId), nullptr, nullptr);
+    if (p < 0) {
+        qWarning() << "[DDSLink] dds_create_participant failed on domain"
+                    << domainId << ":" << dds_strretcode(-p);
+        return p;
+    }
+
+    s_domainParticipants[domainId] = p;
+    s_domainRefCounts[domainId] = 1;
+    qInfo() << "[DDSLink] Created shared participant on domain" << domainId
+            << "entity:" << p;
+    return p;
+}
+
+void DDSLink::releaseSharedParticipant(int domainId)
+{
+    auto refIt = s_domainRefCounts.find(domainId);
+    if (refIt == s_domainRefCounts.end()) return;
+
+    (*refIt)--;
+    qInfo() << "[DDSLink] Released shared participant on domain" << domainId
+            << "refcount:" << *refIt;
+
+    if (*refIt <= 0) {
+        auto pIt = s_domainParticipants.find(domainId);
+        if (pIt != s_domainParticipants.end() && *pIt > 0) {
+            dds_delete(*pIt);
+            qInfo() << "[DDSLink] Destroyed shared participant on domain" << domainId;
+        }
+        s_domainParticipants.remove(domainId);
+        s_domainRefCounts.remove(domainId);
     }
 }
 

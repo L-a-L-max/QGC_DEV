@@ -30,9 +30,10 @@ public:
     /// Destroy the DDS participant (called from destructor and startDiscovery).
     void destroyParticipant();
 
-    /// Release ownership of the discovery participant without deleting it.
-    /// The caller is responsible for calling dds_delete() on the returned
-    /// entity.  Returns DDS_ENTITY_NIL if no participant exists.
+    /// Return the shared participant entity without releasing our reference.
+    /// The caller should acquire its own reference via
+    /// DDSLink::acquireSharedParticipant().  Returns DDS_ENTITY_NIL if
+    /// no participant exists.
     dds_entity_t releaseParticipant();
 
     /// Whether a scan is currently active.

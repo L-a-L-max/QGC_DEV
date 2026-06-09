@@ -1,11 +1,11 @@
 #ifdef QGC_ENABLE_DDS
 
 #include "DDSDiscovery.h"
+#include "DDSLink.h"
 
 #include <QtCore/QDebug>
 #include <QtCore/QRegularExpression>
 #include <QtCore/QSet>
-#include <QtNetwork/QNetworkInterface>
 
 #include <dds/dds.h>
 
@@ -24,61 +24,14 @@ DDSDiscovery::~DDSDiscovery()
 
 void DDSDiscovery::startDiscovery(int domainId)
 {
-    // Stop any previous scan and destroy stale participant
     if (_running) {
         stopDiscovery();
     }
-    destroyParticipant();
 
-    // Build a minimal CycloneDDS config that enables multicast on all
-    // physical interfaces – same logic as DDSLink::_createParticipant().
-    if (qEnvironmentVariableIsEmpty("CYCLONEDDS_URI")) {
-        QString interfacesXml;
-        const auto allIfaces = QNetworkInterface::allInterfaces();
-        for (const QNetworkInterface &iface : allIfaces) {
-            if (!(iface.flags() & QNetworkInterface::IsUp)) continue;
-            if (iface.flags() & QNetworkInterface::IsLoopBack) continue;
-            const QString name = iface.name();
-            if (name.startsWith(QStringLiteral("docker")) ||
-                name.startsWith(QStringLiteral("br-")) ||
-                name.startsWith(QStringLiteral("veth")) ||
-                name.startsWith(QStringLiteral("virbr"))) {
-                continue;
-            }
-            bool hasIpv4 = false;
-            for (const QNetworkAddressEntry &entry : iface.addressEntries()) {
-                if (entry.ip().protocol() == QAbstractSocket::IPv4Protocol) {
-                    hasIpv4 = true;
-                    break;
-                }
-            }
-            if (!hasIpv4) continue;
-            interfacesXml += QStringLiteral("        <NetworkInterface name=\"%1\" multicast=\"true\"/>\n").arg(name);
-        }
-
-        QString config;
-        if (interfacesXml.isEmpty()) {
-            config = QStringLiteral(
-                "<CycloneDDS>"
-                "  <Domain id=\"any\">"
-                "    <Compatibility><StandardsConformance>lax</StandardsConformance></Compatibility>"
-                "  </Domain>"
-                "</CycloneDDS>");
-        } else {
-            config = QStringLiteral(
-                "<CycloneDDS>"
-                "  <Domain id=\"any\">"
-                "    <General><Interfaces>\n%1"
-                "    </Interfaces></General>"
-                "    <Compatibility><StandardsConformance>lax</StandardsConformance></Compatibility>"
-                "  </Domain>"
-                "</CycloneDDS>").arg(interfacesXml);
-        }
-        qputenv("CYCLONEDDS_URI", config.toUtf8());
-    }
-
-    _participant = dds_create_participant(static_cast<dds_domainid_t>(domainId), nullptr, nullptr);
-    if (_participant < 0) {
+    // Use the domain-wide shared participant (same as DDSLink).
+    // This avoids the CycloneDDS multi-participant data-delivery bug.
+    _participant = DDSLink::acquireSharedParticipant(domainId);
+    if (_participant <= 0) {
         const QString err = QStringLiteral("Failed to create discovery participant on domain %1").arg(domainId);
         qCWarning(DDSDiscoveryLog) << err;
         emit discoveryError(err);
@@ -101,9 +54,8 @@ void DDSDiscovery::stopDiscovery()
 {
     _pollTimer.stop();
 
-    // Do NOT destroy the participant here — it may be reused by DDSLink
-    // via releaseParticipant() → takeDiscoveryParticipant().
-    // Cleanup happens in releaseParticipant() (transfer) or ~DDSDiscovery().
+    // Do NOT release the shared participant here — DDSLink may still be
+    // using it.  Cleanup happens in destroyParticipant() or ~DDSDiscovery().
 
     if (_running) {
         _running = false;
@@ -116,7 +68,7 @@ void DDSDiscovery::destroyParticipant()
 {
     _pollTimer.stop();
     if (_participant > 0) {
-        dds_delete(_participant);
+        DDSLink::releaseSharedParticipant(_domainId);
         _participant = DDS_ENTITY_NIL;
     }
 }
@@ -125,8 +77,11 @@ dds_entity_t DDSDiscovery::releaseParticipant()
 {
     _pollTimer.stop();
 
+    // Return the shared participant entity but do NOT release our reference.
+    // The caller (DDSLink) will acquire its own reference via
+    // acquireSharedParticipant(), and we release ours in destroyParticipant()
+    // or the destructor.
     const dds_entity_t p = _participant;
-    _participant = DDS_ENTITY_NIL;
 
     if (_running) {
         _running = false;

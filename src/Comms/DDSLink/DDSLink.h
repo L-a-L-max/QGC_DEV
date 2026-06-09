@@ -42,6 +42,17 @@ public:
     DDSCommandPublisher *commandPublisher() { return &_commandPublisher; }
     DDSHeartbeatPublisher *heartbeatPublisher() { return &_heartbeatPublisher; }
 
+    /// Get or create the single shared DDS participant for a domain.
+    /// CycloneDDS does not reliably deliver data when multiple participants
+    /// in the same process share a domain, so all DDSLinks on the same domain
+    /// must share one participant.  Reference-counted: call
+    /// releaseSharedParticipant() when done.
+    static dds_entity_t acquireSharedParticipant(int domainId);
+
+    /// Release a reference to the shared participant for a domain.
+    /// The participant is destroyed when the last reference is released.
+    static void releaseSharedParticipant(int domainId);
+
 signals:
     void ddsMessageReceived(const QString &topicName,
                             const QHash<QString, QVariant> &fields,
@@ -82,6 +93,10 @@ private:
 
     QHash<QString, ReaderInfo> _readers;
     QSet<QString>              _receivedTopics;  ///< tracks first-sample logging per topic
+    int                        _domainId = -1;   ///< domain used by this link (for releaseSharedParticipant)
+
+    static QHash<int, dds_entity_t> s_domainParticipants;
+    static QHash<int, int>          s_domainRefCounts;
 };
 
 #endif // QGC_ENABLE_DDS
