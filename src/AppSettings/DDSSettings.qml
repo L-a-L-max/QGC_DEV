@@ -8,8 +8,37 @@ import QGroundControl.Controls
 ColumnLayout {
     spacing: _rowSpacing
 
+    property bool _hasConfig: subEditConfig !== null && subEditConfig !== undefined
+
     function saveSettings() {
+        if (!_hasConfig) return
+        // Sync the currently displayed ComboBox text to the config before save.
+        // This handles the case where the user sees a namespace in the dropdown
+        // but hasn't explicitly clicked on it (currentIndex binding doesn't
+        // trigger onActivated).
+        if (nsCombo.currentText.length > 0) {
+            subEditConfig.namespacePrefix = nsCombo.currentText
+        }
         subEditConfig.stopDiscovery()
+    }
+
+    // When discovery finds namespaces and current prefix is empty,
+    // auto-select the first discovered namespace.
+    Connections {
+        target: _hasConfig ? subEditConfig : null
+        function onDiscoveredNamespacesChanged() {
+            if (!_hasConfig) return
+            var nsList = subEditConfig.discoveredNamespaces
+            if (nsList.length > 0 && subEditConfig.namespacePrefix.length === 0) {
+                // Skip empty-string entries
+                for (var i = 0; i < nsList.length; i++) {
+                    if (nsList[i].length > 0) {
+                        subEditConfig.namespacePrefix = nsList[i]
+                        break
+                    }
+                }
+            }
+        }
     }
 
     // ── Domain ID ──
@@ -19,14 +48,17 @@ ColumnLayout {
         QGCLabel { text: qsTr("Domain ID") }
         QGCTextField {
             id:                     domainField
-            text:                   subEditConfig.domainId.toString()
+            text:                   _hasConfig ? subEditConfig.domainId.toString() : "0"
             focus:                  true
             Layout.preferredWidth:  _secondColumnWidth * 0.5
             inputMethodHints:       Qt.ImhFormattedNumbersOnly
-            onTextChanged:          subEditConfig.domainId = parseInt(domainField.text) || 0
+            onTextChanged: {
+                if (_hasConfig) subEditConfig.domainId = parseInt(domainField.text) || 0
+            }
         }
         QGCButton {
-            text:       subEditConfig.discovering ? qsTr("Stop Scan") : qsTr("Scan")
+            text:       _hasConfig && subEditConfig.discovering ? qsTr("Stop Scan") : qsTr("Scan")
+            enabled:    _hasConfig
             onClicked: {
                 if (subEditConfig.discovering) {
                     subEditConfig.stopDiscovery()
@@ -47,30 +79,36 @@ ColumnLayout {
             id:                     nsCombo
             Layout.preferredWidth:  _secondColumnWidth
             editable:               true
-            model:                  subEditConfig.discoveredNamespaces.length > 0
-                                        ? subEditConfig.discoveredNamespaces
-                                        : [""]
+            model: {
+                if (!_hasConfig) return [""]
+                return subEditConfig.discoveredNamespaces.length > 0
+                       ? subEditConfig.discoveredNamespaces
+                       : [""]
+            }
             currentIndex: {
+                if (!_hasConfig) return 0
                 if (subEditConfig.namespacePrefix.length === 0) return 0
-                var idx = subEditConfig.discoveredNamespaces.indexOf(subEditConfig.namespacePrefix)
+                var nsList = _hasConfig ? subEditConfig.discoveredNamespaces : []
+                var idx = nsList.indexOf(subEditConfig.namespacePrefix)
                 return idx >= 0 ? idx : 0
             }
 
             onActivated: function(index) {
+                if (!_hasConfig) return
                 var ns = model[index] || ""
                 subEditConfig.namespacePrefix = ns
             }
 
             // Handle manually typed text
             onAccepted: {
-                subEditConfig.namespacePrefix = editText
+                if (_hasConfig) subEditConfig.namespacePrefix = editText
             }
         }
     }
 
     // Manual entry hint
     QGCLabel {
-        visible:                subEditConfig.discoveredNamespaces.length === 0 && !subEditConfig.discovering
+        visible:                _hasConfig && subEditConfig.discoveredNamespaces.length === 0 && !subEditConfig.discovering
         Layout.preferredWidth:  _secondColumnWidth
         Layout.fillWidth:       true
         font.pointSize:         ScreenTools.smallFontPointSize
@@ -80,14 +118,17 @@ ColumnLayout {
 
     // Discovery status
     QGCLabel {
-        visible:                subEditConfig.discovering
+        visible:                _hasConfig && subEditConfig.discovering
         Layout.preferredWidth:  _secondColumnWidth
         Layout.fillWidth:       true
         font.pointSize:         ScreenTools.smallFontPointSize
         wrapMode:               Text.WordWrap
-        text:                   subEditConfig.discoveredNamespaces.length > 0
-                                    ? qsTr("Found %1 namespace(s). Scanning...").arg(subEditConfig.discoveredNamespaces.length)
-                                    : qsTr("Scanning for DDS namespaces on domain %1...").arg(subEditConfig.domainId)
+        text: {
+            if (!_hasConfig) return ""
+            return subEditConfig.discoveredNamespaces.length > 0
+                   ? qsTr("Found %1 namespace(s). Scanning...").arg(subEditConfig.discoveredNamespaces.length)
+                   : qsTr("Scanning for DDS namespaces on domain %1...").arg(subEditConfig.domainId)
+        }
     }
 
     // ── Vendor Mapping ──
@@ -97,10 +138,12 @@ ColumnLayout {
         QGCLabel { text: qsTr("Vendor Mapping") }
         QGCTextField {
             id:                     vendorField
-            text:                   subEditConfig.vendorMapping
+            text:                   _hasConfig ? subEditConfig.vendorMapping : ""
             Layout.preferredWidth:  _secondColumnWidth
             placeholderText:        qsTr("Leave empty for default PX4")
-            onTextChanged:          subEditConfig.vendorMapping = vendorField.text
+            onTextChanged: {
+                if (_hasConfig) subEditConfig.vendorMapping = vendorField.text
+            }
         }
     }
 

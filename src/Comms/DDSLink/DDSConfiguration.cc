@@ -20,6 +20,10 @@ DDSConfiguration::DDSConfiguration(const DDSConfiguration *copy, QObject *parent
 DDSConfiguration::~DDSConfiguration()
 {
     stopDiscovery();
+    if (_pendingParticipant > 0) {
+        dds_delete(_pendingParticipant);
+        _pendingParticipant = DDS_ENTITY_NIL;
+    }
 }
 
 void DDSConfiguration::setDomainId(int id)
@@ -85,6 +89,13 @@ void DDSConfiguration::stopDiscovery()
 
 dds_entity_t DDSConfiguration::takeDiscoveryParticipant()
 {
+    // Prefer the participant transferred from the edit-copy during copyFrom()
+    if (_pendingParticipant > 0) {
+        dds_entity_t p = _pendingParticipant;
+        _pendingParticipant = DDS_ENTITY_NIL;
+        qInfo() << "[DDSConfiguration] Providing pending participant:" << p;
+        return p;
+    }
     if (!_discovery) {
         return DDS_ENTITY_NIL;
     }
@@ -107,12 +118,23 @@ void DDSConfiguration::_onNamespacesUpdated(const QStringList &namespaces)
 void DDSConfiguration::copyFrom(const LinkConfiguration *source)
 {
     LinkConfiguration::copyFrom(source);
-    const auto *ddsSource = qobject_cast<const DDSConfiguration *>(source);
+    auto *ddsSource = const_cast<DDSConfiguration *>(
+        qobject_cast<const DDSConfiguration *>(source));
     if (ddsSource) {
         setDomainId(ddsSource->domainId());
         setVendorMapping(ddsSource->vendorMapping());
         setNamespacePrefix(ddsSource->namespacePrefix());
         setAutoDiscover(ddsSource->autoDiscover());
+
+        // Transfer the discovery participant so DDSLink can reuse it
+        // instead of creating a new one (avoids RTPS re-discovery delay).
+        if (ddsSource->_discovery) {
+            _pendingParticipant = ddsSource->_discovery->releaseParticipant();
+            if (_pendingParticipant > 0) {
+                qInfo() << "[DDSConfiguration] Transferred participant"
+                        << _pendingParticipant << "from edit config";
+            }
+        }
     }
 }
 

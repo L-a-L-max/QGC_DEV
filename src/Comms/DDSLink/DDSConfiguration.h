@@ -54,6 +54,8 @@ public:
     Q_INVOKABLE void stopDiscovery();
 
     /// Release the discovery participant for reuse by DDSLink.
+    /// Checks _pendingParticipant (set during copyFrom) first, then
+    /// falls back to the live DDSDiscovery instance.
     /// Returns DDS_ENTITY_NIL if no participant is available.
     dds_entity_t takeDiscoveryParticipant();
 
@@ -85,6 +87,9 @@ private:
     bool        _discovering     = false;
 
     DDSDiscovery *_discovery = nullptr;
+
+    /// Participant transferred from the edit-copy config during copyFrom().
+    dds_entity_t _pendingParticipant = DDS_ENTITY_NIL;
 };
 
 #endif // QGC_ENABLE_DDS

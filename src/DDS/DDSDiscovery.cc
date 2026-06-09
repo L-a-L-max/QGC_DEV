@@ -19,15 +19,16 @@ DDSDiscovery::DDSDiscovery(QObject *parent)
 
 DDSDiscovery::~DDSDiscovery()
 {
-    stopDiscovery();
+    destroyParticipant();
 }
 
 void DDSDiscovery::startDiscovery(int domainId)
 {
-    // Stop any previous scan first
+    // Stop any previous scan and destroy stale participant
     if (_running) {
         stopDiscovery();
     }
+    destroyParticipant();
 
     // Build a minimal CycloneDDS config that enables multicast on all
     // physical interfaces – same logic as DDSLink::_createParticipant().
@@ -100,15 +101,23 @@ void DDSDiscovery::stopDiscovery()
 {
     _pollTimer.stop();
 
-    if (_participant > 0) {
-        dds_delete(_participant);
-        _participant = DDS_ENTITY_NIL;
-    }
+    // Do NOT destroy the participant here — it may be reused by DDSLink
+    // via releaseParticipant() → takeDiscoveryParticipant().
+    // Cleanup happens in releaseParticipant() (transfer) or ~DDSDiscovery().
 
     if (_running) {
         _running = false;
         emit runningChanged();
-        qInfo() << "[DDSDiscovery] Stopped discovery";
+        qInfo() << "[DDSDiscovery] Stopped discovery (participant preserved)";
+    }
+}
+
+void DDSDiscovery::destroyParticipant()
+{
+    _pollTimer.stop();
+    if (_participant > 0) {
+        dds_delete(_participant);
+        _participant = DDS_ENTITY_NIL;
     }
 }
 
@@ -185,6 +194,7 @@ QStringList DDSDiscovery::_extractNamespaces(dds_entity_t participant)
     }
     dds_delete(reader);
 
+    nsSet.remove(QString());  // exclude empty namespace from list
     QStringList result = nsSet.values();
     result.sort();
     return result;

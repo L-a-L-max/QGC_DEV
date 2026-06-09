@@ -24,8 +24,11 @@ public:
     /// namespaces changes.
     void startDiscovery(int domainId);
 
-    /// Stop scanning and release the temporary participant.
+    /// Stop scanning but preserve the participant for reuse by DDSLink.
     void stopDiscovery();
+
+    /// Destroy the DDS participant (called from destructor and startDiscovery).
+    void destroyParticipant();
 
     /// Release ownership of the discovery participant without deleting it.
     /// The caller is responsible for calling dds_delete() on the returned
