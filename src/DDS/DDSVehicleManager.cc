@@ -25,8 +25,10 @@ DDSVehicleManager::DDSVehicleManager(DDSLink *link, QObject *parent)
                    this, &DDSVehicleManager::onDDSMessage);
     (void) connect(&_heartbeatTimer, &QTimer::timeout,
                    this, &DDSVehicleManager::_emitSyntheticHeartbeat);
-    (void) connect(link, &LinkInterface::disconnected,
-                   &_heartbeatTimer, &QTimer::stop);
+    (void) connect(link, &LinkInterface::disconnected, this, [this]() {
+        _heartbeatTimer.stop();
+        _vehicleCreated = false;
+    });
 }
 
 DDSVehicleManager::~DDSVehicleManager() = default;
