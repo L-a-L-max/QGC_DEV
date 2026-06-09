@@ -90,6 +90,13 @@ bool DDSLink::_connect()
         qWarning() << "[DDSLink] GCS heartbeat init failed (pre-arm GCS check may fail)";
     }
 
+    // Virtual joystick publisher (manual_control_input → PX4)
+    if (_manualControlPublisher.init(_participant, nsPrefix)) {
+        qInfo() << "[DDSLink] Manual control publisher ready";
+    } else {
+        qWarning() << "[DDSLink] Manual control publisher init failed (virtual joystick will not work)";
+    }
+
     _pollTimer.start();
 
     _connected = true;
@@ -170,6 +177,7 @@ void DDSLink::disconnect()
     // Deinit publishers before destroying participant
     _heartbeatPublisher.deinit();
     _commandPublisher.deinit();
+    _manualControlPublisher.deinit();
 
     // Delete readers explicitly before destroying participant
     for (auto it = _readers.cbegin(); it != _readers.cend(); ++it) {

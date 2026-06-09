@@ -82,6 +82,7 @@ class TrajectoryPoints;
 class VehicleObjectAvoidance;
 class VehicleSupports;
 class DDSCommandPublisher;
+class DDSManualControlPublisher;
 
 class Vehicle : public VehicleFactGroup, public VehicleTypes
 {
@@ -586,6 +587,8 @@ public:
     /// Set the DDS command publisher for this vehicle (called by DDSVehicleManager).
     void setDDSCommandPublisher(DDSCommandPublisher *publisher) { _ddsCommandPublisher = publisher; }
     DDSCommandPublisher *ddsCommandPublisher() const { return _ddsCommandPublisher; }
+    void setDDSManualControlPublisher(DDSManualControlPublisher *publisher) { _ddsManualControlPublisher = publisher; }
+    DDSManualControlPublisher *ddsManualControlPublisher() const { return _ddsManualControlPublisher; }
 #endif
 
     static void showCommandAckError(const mavlink_command_ack_t& ack);
@@ -958,6 +961,7 @@ private:
     bool            _allSensorsHealthy                      = true;
 #ifdef QGC_ENABLE_DDS
     DDSCommandPublisher *_ddsCommandPublisher               = nullptr;
+    DDSManualControlPublisher *_ddsManualControlPublisher    = nullptr;
 #endif
     VehicleSigningController* _signingController            = nullptr;
     std::atomic<bool> _joystickAuxRcOverrideActive           = false;

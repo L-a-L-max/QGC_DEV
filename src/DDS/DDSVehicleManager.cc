@@ -106,6 +106,10 @@ void DDSVehicleManager::_createVehicle(int vehicleType)
             vehicle->setDDSCommandPublisher(_link->commandPublisher());
             qInfo() << "[DDSVehicleManager] Attached DDSCommandPublisher to vehicle" << vehicleId;
 
+            // Attach DDS manual control publisher for virtual joystick
+            vehicle->setDDSManualControlPublisher(_link->manualControlPublisher());
+            qInfo() << "[DDSVehicleManager] Attached DDSManualControlPublisher to vehicle" << vehicleId;
+
             // Bridge DDS command ACKs to Vehicle::mavCommandResult so that
             // PX4FirmwarePlugin's guided-mode flows (takeoff → ACK → arm)
             // receive the ACK and trigger follow-up actions.

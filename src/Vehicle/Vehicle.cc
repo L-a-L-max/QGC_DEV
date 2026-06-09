@@ -38,6 +38,7 @@
 #include "MavCommandQueue.h"
 #ifdef QGC_ENABLE_DDS
 #include "DDSCommandPublisher.h"
+#include "DDSManualControlPublisher.h"
 #endif
 #include "MessageIntervalManager.h"
 #include "TerrainQueryCoordinator.h"
@@ -1736,6 +1737,16 @@ void Vehicle::virtualTabletJoystickValue(double roll, double pitch, double yaw, 
     bool isActiveVehicle = (MultiVehicleManager::instance()->activeVehicle() == this);
     bool joystickEnabled = isActiveVehicle && JoystickManager::instance()->activeJoystickEnabledForActiveVehicle();
     if (!joystickEnabled) {
+#ifdef QGC_ENABLE_DDS
+        if (_ddsManualControlPublisher && _ddsManualControlPublisher->isReady()) {
+            _ddsManualControlPublisher->sendManualControl(
+                static_cast<float>(roll),
+                static_cast<float>(pitch),
+                static_cast<float>(yaw),
+                static_cast<float>(thrust));
+            return;
+        }
+#endif
         sendJoystickDataThreadSafe(
                     static_cast<float>(roll),
                     static_cast<float>(pitch),
