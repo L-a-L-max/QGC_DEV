@@ -2,6 +2,7 @@
 #include "MAVLinkLib.h"
 #include "Vehicle.h"
 #include "VehicleLinkManager.h"
+#include "LinkConfiguration.h"
 #include "QGCCorePlugin.h"
 #include "QGCOptions.h"
 #include "FirmwarePlugin.h"
@@ -269,6 +270,12 @@ bool InitialConnectStateMachine::_shouldSkipAutopilotVersionRequest() const
         qCDebug(InitialConnectStateMachineLog) << "Skipping AUTOPILOT_VERSION: high latency or log replay";
         return true;
     }
+#ifdef QGC_ENABLE_DDS
+    if (sharedLink->linkConfiguration()->type() == LinkConfiguration::TypeDDS) {
+        qCDebug(InitialConnectStateMachineLog) << "Skipping AUTOPILOT_VERSION: DDS link";
+        return true;
+    }
+#endif
     return false;
 }
 
@@ -289,6 +296,11 @@ bool InitialConnectStateMachine::_shouldSkipForLinkType() const
     if (!sharedLink) {
         return true;
     }
+#ifdef QGC_ENABLE_DDS
+    if (sharedLink->linkConfiguration()->type() == LinkConfiguration::TypeDDS) {
+        return true;
+    }
+#endif
     return sharedLink->linkConfiguration()->isHighLatency() || sharedLink->isLogReplay();
 }
 
@@ -389,6 +401,11 @@ void InitialConnectStateMachine::_requestStandardModes(AsyncFunctionState* state
 {
     qCDebug(InitialConnectStateMachineLog) << "_stateRequestStandardModes";
 
+    if (_shouldSkipForLinkType()) {
+        state->complete();
+        return;
+    }
+
     state->connectToCompletion(vehicle()->_standardModes, &StandardModes::requestCompleted);
     vehicle()->_standardModes->request();
 }
@@ -396,6 +413,11 @@ void InitialConnectStateMachine::_requestStandardModes(AsyncFunctionState* state
 void InitialConnectStateMachine::_requestCompInfo(AsyncFunctionState* state)
 {
     qCDebug(InitialConnectStateMachineLog) << "_stateRequestCompInfo";
+
+    if (_shouldSkipForLinkType()) {
+        state->complete();
+        return;
+    }
 
     connect(vehicle()->_componentInformationManager, &ComponentInformationManager::progressUpdate,
             this, &InitialConnectStateMachine::_onSubProgressUpdate, Qt::UniqueConnection);
@@ -420,6 +442,12 @@ void InitialConnectStateMachine::_requestCompInfo(AsyncFunctionState* state)
 void InitialConnectStateMachine::_requestParameters(SkippableAsyncState* state)
 {
     qCDebug(InitialConnectStateMachineLog) << "_stateRequestParameters";
+
+    if (_shouldSkipForLinkType()) {
+        vehicle()->_parameterManager->setParameterDownloadSkipped(true);
+        state->complete();
+        return;
+    }
 
     const bool cacheOnly = _shouldSkipForFlying();
     QMetaObject::Connection cacheFailedConn;
