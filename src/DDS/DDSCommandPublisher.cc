@@ -41,11 +41,17 @@ bool DDSCommandPublisher::init(dds_entity_t participant, const QString &namespac
         return false;
     }
 
-    // Use RELIABLE QoS for commands to ensure delivery
+    // Use BEST_EFFORT + VOLATILE QoS for commands.  CycloneDDS has a
+    // data-delivery bug when multiple RELIABLE+TRANSIENT_LOCAL writers of the
+    // same type share a single participant: only the first writer's data is
+    // actually delivered.  BEST_EFFORT matches the heartbeat publisher QoS
+    // (which works correctly for all vehicles) and PX4's default subscriber
+    // QoS.  QGC already has command-level retries, so reliability is handled
+    // at the application layer.
     dds_qos_t *qos = dds_create_qos();
-    dds_qset_reliability(qos, DDS_RELIABILITY_RELIABLE, DDS_SECS(1));
-    dds_qset_durability(qos, DDS_DURABILITY_TRANSIENT_LOCAL);
-    dds_qset_history(qos, DDS_HISTORY_KEEP_LAST, 5);
+    dds_qset_reliability(qos, DDS_RELIABILITY_BEST_EFFORT, 0);
+    dds_qset_durability(qos, DDS_DURABILITY_VOLATILE);
+    dds_qset_history(qos, DDS_HISTORY_KEEP_LAST, 1);
 
     _writer = dds_create_writer(participant, _topic, qos, nullptr);
     dds_delete_qos(qos);
