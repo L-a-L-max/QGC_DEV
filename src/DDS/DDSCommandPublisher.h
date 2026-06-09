@@ -35,6 +35,9 @@ public:
     /// Number of matched subscriptions (PX4 readers) for diagnostics.
     int matchedSubscriptionCount() const;
 
+    /// Topic name this writer publishes to (e.g. "rt/px4_1/fmu/in/vehicle_command").
+    QString topicName() const { return _topicName; }
+
     /// Send a vehicle command to PX4.
     /// @param command     MAV_CMD command ID
     /// @param param1-7    Command parameters
@@ -59,6 +62,7 @@ signals:
 private:
     dds_entity_t _writer = DDS_ENTITY_NIL;
     dds_entity_t _topic  = DDS_ENTITY_NIL;
+    QString      _topicName;
 };
 
 #endif // QGC_ENABLE_DDS

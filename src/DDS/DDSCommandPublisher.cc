@@ -27,16 +27,16 @@ bool DDSCommandPublisher::init(dds_entity_t participant, const QString &namespac
         return true;
     }
 
-    const QString topicName = namespacePrefix + QStringLiteral("fmu/in/vehicle_command");
+    _topicName = namespacePrefix + QStringLiteral("fmu/in/vehicle_command");
 
     _topic = dds_create_topic(
         participant,
         &px4_msgs_msg_dds__VehicleCommand__desc,
-        topicName.toUtf8().constData(),
+        _topicName.toUtf8().constData(),
         nullptr, nullptr);
 
     if (_topic < 0) {
-        qCWarning(DDSCommandPublisherLog) << "Failed to create topic:" << topicName
+        qCWarning(DDSCommandPublisherLog) << "Failed to create topic:" << _topicName
                                           << "error:" << dds_strretcode(-_topic);
         return false;
     }
@@ -51,13 +51,13 @@ bool DDSCommandPublisher::init(dds_entity_t participant, const QString &namespac
     dds_delete_qos(qos);
 
     if (_writer < 0) {
-        qCWarning(DDSCommandPublisherLog) << "Failed to create writer:" << topicName
+        qCWarning(DDSCommandPublisherLog) << "Failed to create writer:" << _topicName
                                           << "error:" << dds_strretcode(-_writer);
         _writer = DDS_ENTITY_NIL;
         return false;
     }
 
-    qInfo() << "[DDSCommandPublisher] Writer created for topic:" << topicName;
+    qInfo() << "[DDSCommandPublisher] Writer created for topic:" << _topicName;
     return true;
 }
 
@@ -137,10 +137,18 @@ bool DDSCommandPublisher::sendCommand(uint32_t command,
         return false;
     }
 
+    const int subs = matchedSubscriptionCount();
     qInfo() << "[DDSCommandPublisher] Sent command" << command
+            << "on" << _topicName
+            << "matched=" << subs
             << "p1=" << param1 << "p2=" << param2 << "p3=" << param3
             << "p7=" << param7
             << "target=" << msg.target_system << "/" << msg.target_component;
+    if (subs == 0) {
+        qCWarning(DDSCommandPublisherLog) << "WARNING: command" << command
+            << "written to" << _topicName
+            << "but writer has 0 matched subscriptions — PX4 will NOT receive it";
+    }
     emit commandSent(command, param1);
     return true;
 }

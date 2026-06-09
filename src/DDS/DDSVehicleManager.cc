@@ -181,8 +181,11 @@ void DDSVehicleManager::_attachToVehicle(Vehicle *vehicle, const QString &ns)
     _link->dataInjector()->setVehicle(vehicle);
     qInfo() << "[DDSVehicleManager] Attached DDSDataInjector to vehicle" << vehicle->id();
 
-    vehicle->setDDSCommandPublisher(_link->commandPublisher());
-    qInfo() << "[DDSVehicleManager] Attached DDSCommandPublisher to vehicle" << vehicle->id();
+    DDSCommandPublisher *pub = _link->commandPublisher();
+    vehicle->setDDSCommandPublisher(pub);
+    qInfo() << "[DDSVehicleManager] Attached DDSCommandPublisher to vehicle" << vehicle->id()
+            << "topic=" << (pub ? pub->topicName() : "null")
+            << "matched=" << (pub ? pub->matchedSubscriptionCount() : -1);
 
     if (!ns.isEmpty()) {
         vehicle->setCustomName(ns);

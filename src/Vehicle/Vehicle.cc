@@ -1894,6 +1894,9 @@ void Vehicle::guidedModeTakeoff(double altitudeRelative)
         QGC::showAppMessage(guided_mode_not_supported_by_vehicle);
         return;
     }
+    qInfo() << "[Vehicle] guidedModeTakeoff: id=" << id() << "name=" << _customName
+            << "altRel=" << altitudeRelative
+            << "armed=" << armed() << "flying=" << flying();
     _firmwarePlugin->guidedModeTakeoff(this, altitudeRelative);
 }
 
@@ -2192,6 +2195,8 @@ void Vehicle::sendMavCommand(int compId, MAV_CMD command, bool showError, float 
 {
 #ifdef QGC_ENABLE_DDS
     if (_ddsCommandPublisher && _ddsCommandPublisher->isReady()) {
+        qInfo() << "[Vehicle] sendMavCommand via DDS: vehicleId=" << id()
+                << "name=" << _customName << "cmd=" << static_cast<int>(command);
         _ddsCommandPublisher->sendCommand(
             static_cast<uint32_t>(command),
             param1, param2, param3, param4,
@@ -2199,6 +2204,8 @@ void Vehicle::sendMavCommand(int compId, MAV_CMD command, bool showError, float 
             static_cast<uint8_t>(id()),
             static_cast<uint8_t>(compId));
         return;
+    } else if (_ddsCommandPublisher) {
+        qCWarning(VehicleLog) << "DDS publisher exists but not ready for vehicle" << id();
     }
 #endif
     _mavCmdQueue->sendCommand(compId, command, showError, param1, param2, param3, param4, param5, param6, param7);
