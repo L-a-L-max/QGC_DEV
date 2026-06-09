@@ -206,14 +206,13 @@ void DDSLink::disconnect()
     _receivedTopics.clear();
 
     if (_participant > 0) {
-        // Save participant back to config for reuse on reconnect
-        // instead of destroying it (avoids RTPS re-discovery delay).
-        DDSConfiguration *cfg = _ddsConfig();
-        if (cfg) {
-            cfg->returnParticipant(_participant);
-        } else {
-            _destroyParticipant(_participant);
-        }
+        // Always destroy the participant on disconnect.  CycloneDDS does
+        // not reliably deliver data after all readers/writers on a
+        // participant have been deleted and new ones are created — the
+        // RTPS endpoint state gets stale even though local match
+        // diagnostics report success.  A fresh participant on reconnect
+        // is the only reliable path.
+        _destroyParticipant(_participant);
         _participant = DDS_ENTITY_NIL;
     }
 
