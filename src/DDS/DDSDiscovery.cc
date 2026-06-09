@@ -84,6 +84,7 @@ void DDSDiscovery::startDiscovery(int domainId)
         return;
     }
 
+    _domainId = domainId;
     _namespaces.clear();
     _running = true;
     emit runningChanged();
@@ -109,6 +110,21 @@ void DDSDiscovery::stopDiscovery()
         emit runningChanged();
         qInfo() << "[DDSDiscovery] Stopped discovery";
     }
+}
+
+dds_entity_t DDSDiscovery::releaseParticipant()
+{
+    _pollTimer.stop();
+
+    const dds_entity_t p = _participant;
+    _participant = DDS_ENTITY_NIL;
+
+    if (_running) {
+        _running = false;
+        emit runningChanged();
+        qInfo() << "[DDSDiscovery] Released participant (domain" << _domainId << ")";
+    }
+    return p;
 }
 
 void DDSDiscovery::_pollBuiltinTopics()

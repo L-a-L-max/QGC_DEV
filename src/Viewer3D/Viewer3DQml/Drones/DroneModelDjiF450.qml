@@ -53,7 +53,7 @@ Node {
         QGCLabel {
             color: "red"
             font.pixelSize: 25
-            text: vehicle ? Number(vehicle.id) : ""
+            text: vehicle ? (vehicle.customName.length > 0 ? vehicle.customName : Number(vehicle.id)) : ""
         }
     }
 

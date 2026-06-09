@@ -74,6 +74,14 @@ void DDSCommandPublisher::deinit()
     }
 }
 
+int DDSCommandPublisher::matchedSubscriptionCount() const
+{
+    if (_writer <= 0) return 0;
+    dds_instance_handle_t handles[10];
+    const int n = dds_get_matched_subscriptions(_writer, handles, 10);
+    return (n > 0) ? n : 0;
+}
+
 bool DDSCommandPublisher::sendCommand(uint32_t command,
                                       float param1, float param2,
                                       float param3, float param4,
@@ -102,7 +110,11 @@ bool DDSCommandPublisher::sendCommand(uint32_t command,
     msg.param6 = param6;
     msg.param7 = param7;
     msg.command = command;
-    msg.target_system = targetSystem;
+    // In DDS mode, each DDSLink publishes to a namespace-specific topic
+    // (e.g. rt/px4_2/fmu/in/vehicle_command). PX4's system_id is always 1,
+    // so target_system must always be 1 regardless of QGC's Vehicle ID.
+    Q_UNUSED(targetSystem);
+    msg.target_system = 1;
     msg.target_component = targetComponent;
     msg.source_system = 255;      // Standard GCS system ID
     msg.source_component = 190;   // Standard GCS component ID (MAV_COMP_ID_MISSIONPLANNER)

@@ -61,6 +61,14 @@ bool DDSHeartbeatPublisher::init(dds_entity_t participant,
     return true;
 }
 
+int DDSHeartbeatPublisher::matchedSubscriptionCount() const
+{
+    if (_writer <= 0) return 0;
+    dds_instance_handle_t handles[10];
+    const int n = dds_get_matched_subscriptions(_writer, handles, 10);
+    return (n > 0) ? n : 0;
+}
+
 void DDSHeartbeatPublisher::deinit()
 {
     _timer.stop();

@@ -97,7 +97,7 @@ RowLayout {
         if (_multipleVehicles) {
             for (var i = 0; i < QGroundControl.multiVehicleManager.vehicles.count; i++) {
                 var vehicle = QGroundControl.multiVehicleManager.vehicles.get(i)
-                newModel.push(qsTr("Vehicle") + " " + vehicle.id)
+                newModel.push(vehicle.customName.length > 0 ? vehicle.customName : qsTr("Vehicle") + " " + vehicle.id)
             }
         }
         _vehicleModel = newModel

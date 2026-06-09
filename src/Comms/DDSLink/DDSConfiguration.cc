@@ -83,6 +83,19 @@ void DDSConfiguration::stopDiscovery()
     }
 }
 
+dds_entity_t DDSConfiguration::takeDiscoveryParticipant()
+{
+    if (!_discovery) {
+        return DDS_ENTITY_NIL;
+    }
+    dds_entity_t p = _discovery->releaseParticipant();
+    if (_discovering) {
+        _discovering = false;
+        emit discoveringChanged();
+    }
+    return p;
+}
+
 void DDSConfiguration::_onNamespacesUpdated(const QStringList &namespaces)
 {
     if (_discoveredNamespaces != namespaces) {

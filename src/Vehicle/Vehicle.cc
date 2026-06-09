@@ -1447,6 +1447,14 @@ QGeoCoordinate Vehicle::homePosition()
     return _homePosition;
 }
 
+void Vehicle::setCustomName(const QString &name)
+{
+    if (_customName != name) {
+        _customName = name;
+        emit customNameChanged();
+    }
+}
+
 void Vehicle::setArmed(bool armed, bool showError)
 {
     // We specifically use COMMAND_LONG:MAV_CMD_COMPONENT_ARM_DISARM since it is supported by more flight stacks.

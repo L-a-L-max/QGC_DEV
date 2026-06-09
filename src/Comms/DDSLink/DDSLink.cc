@@ -57,10 +57,20 @@ bool DDSLink::_connect()
              << "topics:" << _mappingEngine.topicCount()
              << "fields:" << _mappingEngine.fieldCount();
 
-    _participant = _createParticipant(config->domainId());
-    if (_participant < 0) {
-        emit communicationError(tr("DDS Link"), tr("Failed to create DDS participant"));
-        return false;
+    // Try to reuse the discovery participant instead of creating a new one.
+    // This avoids RTPS re-discovery delays and potential writer-matching issues
+    // caused by destroying and recreating participants on the same domain.
+    DDSConfiguration *mutableConfig = const_cast<DDSConfiguration *>(config);
+    _participant = mutableConfig->takeDiscoveryParticipant();
+    if (_participant > 0) {
+        qInfo() << "[DDSLink] Reusing discovery participant on domain"
+                << config->domainId() << "entity:" << _participant;
+    } else {
+        _participant = _createParticipant(config->domainId());
+        if (_participant < 0) {
+            emit communicationError(tr("DDS Link"), tr("Failed to create DDS participant"));
+            return false;
+        }
     }
 
     if (config->autoDiscover()) {
@@ -130,6 +140,21 @@ bool DDSLink::_connect()
                 unmatchedCount++;
             }
         }
+        // Check writer matching for command and heartbeat publishers
+        const int cmdSubs = _commandPublisher.matchedSubscriptionCount();
+        const int hbSubs  = _heartbeatPublisher.matchedSubscriptionCount();
+        qInfo() << "[DDSLink] Writer match diagnostic (5s): command_writer→"
+                << cmdSubs << "subscriber(s), heartbeat_writer→"
+                << hbSubs << "subscriber(s)";
+        if (cmdSubs == 0) {
+            qWarning() << "[DDSLink] Command writer has NO matched subscribers!"
+                       << "PX4 will not receive commands.";
+        }
+        if (hbSubs == 0) {
+            qWarning() << "[DDSLink] Heartbeat writer has NO matched subscribers!"
+                       << "PX4 will report 'Connection to ground station lost'.";
+        }
+
         qInfo() << "[DDSLink] RTPS match diagnostic (5s):" << matchedCount
                  << "readers matched a writer," << unmatchedCount << "unmatched";
         if (unmatchedCount > 0 && matchedCount == 0) {

@@ -2,6 +2,7 @@
 
 #include "DDSVehicleManager.h"
 #include "DDSLink.h"
+#include "DDSConfiguration.h"
 #include "DDSDataInjector.h"
 #include "LinkInterface.h"
 #include "MAVLinkProtocol.h"
@@ -105,6 +106,14 @@ void DDSVehicleManager::_createVehicle(int vehicleType)
             // Attach DDS command publisher so Vehicle can send commands via DDS
             vehicle->setDDSCommandPublisher(_link->commandPublisher());
             qInfo() << "[DDSVehicleManager] Attached DDSCommandPublisher to vehicle" << vehicleId;
+
+            // Set namespace as vehicle display name
+            auto *ddsConfig = qobject_cast<DDSConfiguration *>(_link->linkConfiguration().get());
+            if (ddsConfig && !ddsConfig->namespacePrefix().isEmpty()) {
+                vehicle->setCustomName(ddsConfig->namespacePrefix());
+                qInfo() << "[DDSVehicleManager] Vehicle" << vehicleId
+                        << "display name:" << ddsConfig->namespacePrefix();
+            }
 
             // Bridge DDS command ACKs to Vehicle::mavCommandResult so that
             // PX4FirmwarePlugin's guided-mode flows (takeoff → ACK → arm)

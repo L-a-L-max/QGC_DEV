@@ -32,6 +32,9 @@ public:
     /// Whether the writer is initialized and ready to send.
     bool isReady() const { return _writer > 0; }
 
+    /// Number of matched subscriptions (PX4 readers) for diagnostics.
+    int matchedSubscriptionCount() const;
+
     /// Send a vehicle command to PX4.
     /// @param command     MAV_CMD command ID
     /// @param param1-7    Command parameters

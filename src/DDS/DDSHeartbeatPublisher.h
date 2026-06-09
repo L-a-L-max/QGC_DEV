@@ -30,6 +30,8 @@ public:
     void deinit();
 
     bool isRunning() const { return _timer.isActive(); }
+    bool isReady() const { return _writer > 0; }
+    int matchedSubscriptionCount() const;
 
 private slots:
     void _sendHeartbeat();

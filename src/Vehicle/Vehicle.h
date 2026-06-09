@@ -144,6 +144,7 @@ public:
     Q_ENUM(CheckList)
 
     Q_PROPERTY(int                  id                          READ id                                                             CONSTANT)
+    Q_PROPERTY(QString              customName                  READ customName         WRITE setCustomName                         NOTIFY customNameChanged)
     Q_PROPERTY(AutoPilotPlugin*     autopilotPlugin             MEMBER _autopilotPlugin                                             CONSTANT)
     Q_PROPERTY(QGeoCoordinate       coordinate                  READ coordinate                                                     NOTIFY coordinateChanged)
     Q_PROPERTY(QGeoCoordinate       homePosition                READ homePosition                                                   NOTIFY homePositionChanged)
@@ -427,6 +428,8 @@ public:
     // Property accesors
     int id() const{ return _systemID; }
     int compId() const{ return _compID; }
+    QString customName() const { return _customName; }
+    void setCustomName(const QString &name);
     MAV_AUTOPILOT firmwareType() const { return _firmwareType; }
     MAV_TYPE vehicleType() const { return _vehicleType; }
     QGCMAVLink::VehicleClass_t vehicleClass(void) const { return QGCMAVLink::vehicleClass(_vehicleType); }
@@ -748,6 +751,7 @@ public slots:
     Q_INVOKABLE void sendGripperAction(GRIPPER_ACTIONS gripperOption);
 
 signals:
+    void customNameChanged              ();
     void coordinateChanged              (QGeoCoordinate coordinate);
     void mavlinkMessageReceived         (const mavlink_message_t& message);
     void homePositionChanged            (const QGeoCoordinate& homePosition);
@@ -956,6 +960,7 @@ private:
     bool            _readyToFlyAvailable                    = false;
     bool            _readyToFly                             = false;
     bool            _allSensorsHealthy                      = true;
+    QString         _customName;
 #ifdef QGC_ENABLE_DDS
     DDSCommandPublisher *_ddsCommandPublisher               = nullptr;
 #endif

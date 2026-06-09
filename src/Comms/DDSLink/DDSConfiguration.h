@@ -4,6 +4,8 @@
 
 #include "LinkConfiguration.h"
 
+#include <dds/dds.h>
+
 #include <QtCore/QStringList>
 #include <QtQmlIntegration/QtQmlIntegration>
 
@@ -50,6 +52,10 @@ public:
 
     /// Stop an active discovery scan.
     Q_INVOKABLE void stopDiscovery();
+
+    /// Release the discovery participant for reuse by DDSLink.
+    /// Returns DDS_ENTITY_NIL if no participant is available.
+    dds_entity_t takeDiscoveryParticipant();
 
     // LinkConfiguration overrides
     LinkType type() const override { return TypeDDS; }

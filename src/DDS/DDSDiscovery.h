@@ -27,6 +27,11 @@ public:
     /// Stop scanning and release the temporary participant.
     void stopDiscovery();
 
+    /// Release ownership of the discovery participant without deleting it.
+    /// The caller is responsible for calling dds_delete() on the returned
+    /// entity.  Returns DDS_ENTITY_NIL if no participant exists.
+    dds_entity_t releaseParticipant();
+
     /// Whether a scan is currently active.
     bool isRunning() const { return _running; }
 
@@ -45,6 +50,7 @@ private:
     static QStringList _extractNamespaces(dds_entity_t participant);
 
     dds_entity_t _participant = DDS_ENTITY_NIL;
+    int          _domainId     = -1;
     QTimer       _pollTimer;
     QStringList  _namespaces;
     bool         _running = false;

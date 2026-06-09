@@ -156,7 +156,7 @@ Item {
                     }
 
                     QGCLabel {
-                        text:                 _vehicle ? _vehicle.id : ""
+                        text:                 _vehicle ? (_vehicle.customName.length > 0 ? _vehicle.customName : _vehicle.id) : ""
                         font.pointSize:       ScreenTools.largeFontPointSize
                         color:                qgcPal.text
                         Layout.alignment:     Qt.AlignHCenter

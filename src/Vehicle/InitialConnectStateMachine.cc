@@ -294,14 +294,22 @@ bool InitialConnectStateMachine::_shouldSkipForLinkType() const
 {
     SharedLinkInterfacePtr sharedLink = vehicle()->vehicleLinkManager()->primaryLink().lock();
     if (!sharedLink) {
+        qCDebug(InitialConnectStateMachineLog) << "_shouldSkipForLinkType: no primary link → skip";
         return true;
     }
 #ifdef QGC_ENABLE_DDS
     if (sharedLink->linkConfiguration()->type() == LinkConfiguration::TypeDDS) {
+        qCDebug(InitialConnectStateMachineLog) << "_shouldSkipForLinkType: DDS link → skip";
         return true;
     }
 #endif
-    return sharedLink->linkConfiguration()->isHighLatency() || sharedLink->isLogReplay();
+    const bool skip = sharedLink->linkConfiguration()->isHighLatency() || sharedLink->isLogReplay();
+    if (!skip) {
+        qCDebug(InitialConnectStateMachineLog)
+            << "_shouldSkipForLinkType: link type"
+            << static_cast<int>(sharedLink->linkConfiguration()->type()) << "→ no skip";
+    }
+    return skip;
 }
 
 bool InitialConnectStateMachine::_hasPrimaryLink() const
