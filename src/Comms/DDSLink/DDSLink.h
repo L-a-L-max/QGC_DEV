@@ -12,6 +12,7 @@
 #include "DDSCommandPublisher.h"
 #include "DDSHeartbeatPublisher.h"
 #include "DDSManualControlPublisher.h"
+#include "DDSGotoPublisher.h"
 
 #include <dds/dds.h>
 
@@ -43,6 +44,7 @@ public:
     DDSCommandPublisher *commandPublisher() { return &_commandPublisher; }
     DDSHeartbeatPublisher *heartbeatPublisher() { return &_heartbeatPublisher; }
     DDSManualControlPublisher *manualControlPublisher() { return &_manualControlPublisher; }
+    DDSGotoPublisher *gotoPublisher() { return &_gotoPublisher; }
 
 signals:
     void ddsMessageReceived(const QString &topicName,
@@ -73,6 +75,7 @@ private:
     DDSCommandPublisher       _commandPublisher;
     DDSHeartbeatPublisher      _heartbeatPublisher;
     DDSManualControlPublisher  _manualControlPublisher;
+    DDSGotoPublisher            _gotoPublisher;
 
     QTimer               _pollTimer;
     dds_entity_t         _participant = DDS_ENTITY_NIL;

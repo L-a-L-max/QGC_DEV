@@ -1,0 +1,21 @@
+module px4_msgs {
+module msg {
+module dds_ {
+
+@topic
+struct GotoSetpoint_ {
+    unsigned long long timestamp;
+    float position[3];
+    boolean flag_control_heading;
+    float heading;
+    boolean flag_set_max_horizontal_speed;
+    float max_horizontal_speed;
+    boolean flag_set_max_vertical_speed;
+    float max_vertical_speed;
+    boolean flag_set_max_heading_rate;
+    float max_heading_rate;
+};
+
+}; // dds_
+}; // msg
+}; // px4_msgs

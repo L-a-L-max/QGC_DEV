@@ -97,6 +97,13 @@ bool DDSLink::_connect()
         qWarning() << "[DDSLink] Manual control publisher init failed (virtual joystick will not work)";
     }
 
+    // GotoSetpoint publisher (goto_setpoint → PX4)
+    if (_gotoPublisher.init(_participant, nsPrefix)) {
+        qInfo() << "[DDSLink] Goto publisher ready";
+    } else {
+        qWarning() << "[DDSLink] Goto publisher init failed (goto/mission will not work)";
+    }
+
     _pollTimer.start();
 
     _connected = true;
@@ -178,6 +185,7 @@ void DDSLink::disconnect()
     _heartbeatPublisher.deinit();
     _commandPublisher.deinit();
     _manualControlPublisher.deinit();
+    _gotoPublisher.deinit();
 
     // Delete readers explicitly before destroying participant
     for (auto it = _readers.cbegin(); it != _readers.cend(); ++it) {
