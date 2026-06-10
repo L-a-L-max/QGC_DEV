@@ -8,6 +8,7 @@
 #include <QtCore/QVariant>
 
 class DDSMappingEngine;
+class DDSMissionManager;
 class DDSTransformRegistry;
 class FactGroup;
 class BatteryFactGroup;
@@ -38,6 +39,9 @@ public:
 
     /// Set the target Vehicle whose Facts will be updated.
     void setVehicle(Vehicle *vehicle);
+
+    /// Set the mission manager to receive position/home updates.
+    void setMissionManager(DDSMissionManager *mgr) { _missionManager = mgr; }
 
     /// Statistics: total DDS messages processed.
     quint64 messagesProcessed() const { return _messagesProcessed; }
@@ -97,6 +101,7 @@ private:
     int  _armingState  = 0;
     bool _batteryCreated = false;
     bool _readyToFlySet = false;
+    DDSMissionManager *_missionManager = nullptr;
 };
 
 #endif // QGC_ENABLE_DDS

@@ -110,6 +110,10 @@ void DDSVehicleManager::_createVehicle(int vehicleType)
             vehicle->setDDSManualControlPublisher(_link->manualControlPublisher());
             qInfo() << "[DDSVehicleManager] Attached DDSManualControlPublisher to vehicle" << vehicleId;
 
+            // Wire mission manager to receive position/home updates
+            _link->dataInjector()->setMissionManager(_link->missionManager());
+            qInfo() << "[DDSVehicleManager] Attached DDSMissionManager";
+
             // Bridge DDS command ACKs to Vehicle::mavCommandResult so that
             // PX4FirmwarePlugin's guided-mode flows (takeoff → ACK → arm)
             // receive the ACK and trigger follow-up actions.

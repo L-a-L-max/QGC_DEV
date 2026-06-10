@@ -139,6 +139,9 @@ if(QGC_ENABLE_DDS)
             ${CMAKE_SOURCE_DIR}/src/DDS/DDSManualControlPublisher.h
             ${CMAKE_SOURCE_DIR}/src/DDS/DDSGotoPublisher.cc
             ${CMAKE_SOURCE_DIR}/src/DDS/DDSGotoPublisher.h
+            ${CMAKE_SOURCE_DIR}/src/DDS/DDSMissionManager.cc
+            ${CMAKE_SOURCE_DIR}/src/DDS/DDSMissionManager.h
+            ${CMAKE_SOURCE_DIR}/src/DDS/DDSWaypoint.h
     )
 
     target_include_directories(${CMAKE_PROJECT_NAME}

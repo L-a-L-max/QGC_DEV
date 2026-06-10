@@ -104,6 +104,10 @@ bool DDSLink::_connect()
         qWarning() << "[DDSLink] Goto publisher init failed (goto/mission will not work)";
     }
 
+    // Wire mission manager to publishers
+    _missionManager.setGotoPublisher(&_gotoPublisher);
+    _missionManager.setCommandPublisher(&_commandPublisher);
+
     _pollTimer.start();
 
     _connected = true;

@@ -2,6 +2,7 @@
 
 #include "DDSDataInjector.h"
 #include "DDSMappingEngine.h"
+#include "DDSMissionManager.h"
 #include "DDSTransformRegistry.h"
 #include "Vehicle.h"
 #include "TrajectoryPoints.h"
@@ -221,6 +222,9 @@ void DDSDataInjector::_updateVehicleCoordinate(const QHash<QString, QVariant> &f
     QGeoCoordinate coord(lat, lon, alt);
     if (coord.isValid()) {
         _vehicle->setCoordinateFromDDS(coord);
+        if (_missionManager) {
+            _missionManager->updateVehiclePosition(lat, lon, alt);
+        }
     }
 }
 
@@ -312,6 +316,9 @@ void DDSDataInjector::_updateHomePosition(const QHash<QString, QVariant> &fields
     QGeoCoordinate homeCoord(lat, lon, alt);
     if (homeCoord.isValid()) {
         _vehicle->_setHomePosition(homeCoord);
+        if (_missionManager) {
+            _missionManager->updateHomePosition(lat, lon, alt);
+        }
     }
 }
 
