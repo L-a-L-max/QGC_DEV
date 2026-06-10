@@ -4,6 +4,7 @@
 #include "DDSMappingEngine.h"
 #include "DDSTransformRegistry.h"
 #include "Vehicle.h"
+#include "TrajectoryPoints.h"
 #include "Fact.h"
 #include "FactGroup.h"
 #include "QmlObjectListModel.h"
@@ -257,6 +258,11 @@ void DDSDataInjector::_updateVehicleState(const QHash<QString, QVariant> &fields
         if (_vehicle->_armed != armed) {
             _vehicle->_armed = armed;
             emit _vehicle->armedChanged(armed);
+            if (armed) {
+                _vehicle->trajectoryPoints()->start();
+            } else {
+                _vehicle->trajectoryPoints()->stop();
+            }
         }
     }
 
