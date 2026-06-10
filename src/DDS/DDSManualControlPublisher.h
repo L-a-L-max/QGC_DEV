@@ -25,8 +25,8 @@ public:
     bool isReady() const { return _writer > 0; }
 
     /// Send manual control values to PX4.
-    /// All axes are in the range [-1, 1].
-    bool sendManualControl(float roll, float pitch, float yaw, float throttle);
+    /// roll/pitch/yaw: [-1, 1].  thrust: [0, 1] (QGC convention, mapped to [-1,1] internally).
+    bool sendManualControl(float roll, float pitch, float yaw, float thrust);
 
 private:
     dds_entity_t _writer = DDS_ENTITY_NIL;

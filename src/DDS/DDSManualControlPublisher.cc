@@ -4,9 +4,8 @@
 #include "ManualControlSetpoint.h"
 
 #include <QtCore/QDebug>
-#include <QtCore/QDateTime>
-#include <QtCore/QElapsedTimer>
 
+#include <cmath>
 #include <cstring>
 
 Q_LOGGING_CATEGORY(DDSManualControlLog, "DDSManualControlPublisherLog")
@@ -45,7 +44,7 @@ bool DDSManualControlPublisher::init(dds_entity_t participant,
     dds_qos_t *qos = dds_create_qos();
     dds_qset_reliability(qos, DDS_RELIABILITY_BEST_EFFORT, 0);
     dds_qset_durability(qos, DDS_DURABILITY_VOLATILE);
-    dds_qset_history(qos, DDS_HISTORY_KEEP_LAST, 1);
+    dds_qset_history(qos, DDS_HISTORY_KEEP_LAST, 2);
 
     _writer = dds_create_writer(participant, _topic, qos, nullptr);
     dds_delete_qos(qos);
@@ -73,7 +72,7 @@ void DDSManualControlPublisher::deinit()
 }
 
 bool DDSManualControlPublisher::sendManualControl(float roll, float pitch,
-                                                  float yaw, float throttle)
+                                                  float yaw, float thrust)
 {
     if (_writer <= 0) {
         qCWarning(DDSManualControlLog) << "sendManualControl called but writer not ready";
@@ -83,19 +82,24 @@ bool DDSManualControlPublisher::sendManualControl(float roll, float pitch,
     px4_msgs_msg_dds__ManualControlSetpoint_ msg;
     memset(&msg, 0, sizeof(msg));
 
-    const uint64_t nowUs = static_cast<uint64_t>(QDateTime::currentMSecsSinceEpoch()) * 1000ULL;
-    msg.timestamp = nowUs;
-    msg.timestamp_sample = nowUs;
-    msg.valid = true;
+    // PX4 ucdr_deserialize replaces 0-timestamps with hrt_absolute_time(),
+    // which avoids all wall-clock vs sim-time sync issues.
+    msg.timestamp        = 0;
+    msg.timestamp_sample = 0;
+    msg.valid       = true;
     msg.data_source = 2;  // SOURCE_MAVLINK_0
+
+    // QGC virtual joystick sends thrust in [0,1] (center=0.5).
+    // PX4 ManualControlSetpoint expects throttle in [-1,1] (center=0).
+    const float throttle = (thrust * 2.0f) - 1.0f;
 
     msg.roll     = roll;
     msg.pitch    = pitch;
     msg.yaw      = yaw;
     msg.throttle = throttle;
 
-    msg.sticks_moving = (roll != 0.0f || pitch != 0.0f ||
-                         yaw != 0.0f || throttle != 0.0f);
+    msg.sticks_moving = (fabsf(roll)  > 0.01f || fabsf(pitch) > 0.01f ||
+                         fabsf(yaw)   > 0.01f || fabsf(throttle) > 0.05f);
 
     const dds_return_t rc = dds_write(_writer, &msg);
 
@@ -104,8 +108,8 @@ bool DDSManualControlPublisher::sendManualControl(float roll, float pitch,
         const dds_return_t nMatched = dds_get_matched_subscriptions(_writer, ihs, 16);
         qWarning() << "[DDSManualControl] send: r=" << roll
                    << "p=" << pitch << "y=" << yaw
-                   << "t=" << throttle << "rc=" << rc
-                   << "matched=" << nMatched;
+                   << "t(raw)=" << thrust << "t(mapped)=" << throttle
+                   << "rc=" << rc << "matched=" << nMatched;
     }
 
     return rc == DDS_RETCODE_OK;
