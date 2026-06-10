@@ -170,6 +170,43 @@
             "keywords": "joystick,left handed"
         },
         {
+            "name": "virtualJoystickMaxSpeed",
+            "shortDesc": "Maximum flight speed when virtual joystick is pushed fully.",
+            "longDesc": "Scales virtual joystick output so that full deflection corresponds to this speed. PX4 default maximum is 12 m/s.",
+            "type": "double",
+            "default": 12.0,
+            "min": 1.0,
+            "max": 20.0,
+            "decimalPlaces": 1,
+            "units": "m/s",
+            "label": "Max Joystick Speed",
+            "keywords": "joystick,speed"
+        },
+        {
+            "name": "virtualJoystickDeadzone",
+            "shortDesc": "Joystick center deadzone as a fraction of full range.",
+            "longDesc": "Input below this threshold is treated as zero. Helps prevent unintended drift from accidental touch.",
+            "type": "double",
+            "default": 0.05,
+            "min": 0.0,
+            "max": 0.3,
+            "decimalPlaces": 2,
+            "label": "Joystick Deadzone",
+            "keywords": "joystick,deadzone"
+        },
+        {
+            "name": "virtualJoystickExpo",
+            "shortDesc": "Exponential curve factor for joystick response.",
+            "longDesc": "0 = linear response. Higher values give finer control at low deflections and faster response near full deflection.",
+            "type": "double",
+            "default": 0.0,
+            "min": 0.0,
+            "max": 0.8,
+            "decimalPlaces": 2,
+            "label": "Joystick Expo",
+            "keywords": "joystick,expo,sensitivity"
+        },
+        {
             "name": "gstDebugLevel",
             "shortDesc": "Sets the verbosity of GStreamer debug logging.",
             "longDesc": "Controls the GStreamer debug threshold for all pipeline elements. Changes take effect immediately.",

@@ -2,6 +2,8 @@
 
 #include "DDSManualControlPublisher.h"
 #include "ManualControlSetpoint.h"
+#include "SettingsManager.h"
+#include "AppSettings.h"
 
 #include <QtCore/QDebug>
 
@@ -71,6 +73,22 @@ void DDSManualControlPublisher::deinit()
     }
 }
 
+float DDSManualControlPublisher::_applyJoystickCurve(float input, float deadzone, float expo)
+{
+    const float sign = (input >= 0.0f) ? 1.0f : -1.0f;
+    const float absIn = fabsf(input);
+
+    if (absIn < deadzone) {
+        return 0.0f;
+    }
+
+    const float normalized = (absIn - deadzone) / (1.0f - deadzone);
+    const float curved = (1.0f - expo) * normalized
+                       + expo * normalized * normalized * normalized;
+
+    return sign * curved;
+}
+
 bool DDSManualControlPublisher::sendManualControl(float roll, float pitch,
                                                   float yaw, float thrust)
 {
@@ -79,18 +97,26 @@ bool DDSManualControlPublisher::sendManualControl(float roll, float pitch,
         return false;
     }
 
+    const auto *settings = SettingsManager::instance()->appSettings();
+    const float maxSpeed = static_cast<float>(settings->virtualJoystickMaxSpeed()->rawValue().toDouble());
+    const float deadzone = static_cast<float>(settings->virtualJoystickDeadzone()->rawValue().toDouble());
+    const float expo     = static_cast<float>(settings->virtualJoystickExpo()->rawValue().toDouble());
+
+    const float speedScale = maxSpeed / _defaultMaxSpeed;
+
+    roll  = _applyJoystickCurve(roll,  deadzone, expo) * speedScale;
+    pitch = _applyJoystickCurve(pitch, deadzone, expo) * speedScale;
+    yaw   = _applyJoystickCurve(yaw,   deadzone, expo);
+
     px4_msgs_msg_dds__ManualControlSetpoint_ msg;
     memset(&msg, 0, sizeof(msg));
 
-    // PX4 ucdr_deserialize replaces 0-timestamps with hrt_absolute_time(),
-    // which avoids all wall-clock vs sim-time sync issues.
     msg.timestamp        = 0;
     msg.timestamp_sample = 0;
     msg.valid       = true;
     msg.data_source = 2;  // SOURCE_MAVLINK_0
 
-    // QGC virtual joystick sends thrust in [0,1] (center=0.5).
-    // PX4 ManualControlSetpoint expects throttle in [-1,1] (center=0).
+    // QGC: thrust [0,1] (center=0.5).  PX4: throttle [-1,1] (center=0).
     const float throttle = (thrust * 2.0f) - 1.0f;
 
     msg.roll     = roll;
@@ -109,6 +135,7 @@ bool DDSManualControlPublisher::sendManualControl(float roll, float pitch,
         qWarning() << "[DDSManualControl] send: r=" << roll
                    << "p=" << pitch << "y=" << yaw
                    << "t(raw)=" << thrust << "t(mapped)=" << throttle
+                   << "spd=" << maxSpeed << "dz=" << deadzone << "expo=" << expo
                    << "rc=" << rc << "matched=" << nMatched;
     }
 
