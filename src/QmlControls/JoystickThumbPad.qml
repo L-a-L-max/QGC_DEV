@@ -105,28 +105,30 @@ Item {
         // Position the control around the initial thumb position
         _centerXY = _joyRoot.width / 2  // make sure to know the correct center of the item
 
-        var limitOffset = uiRealX >= _joyRoot.width / 2 ? true : false // as the joystick become small the UI too so we limit the maxOffset for reCentering joystick to prevent misclicks
-        var maxDelta = _joyRoot.x > uiTotalWidth / 2  ? uiTotalWidth - uiRealX - _joyRoot.x - _centerXY : uiRealX
-        var isRightJoystick = _joyRoot.x > uiTotalWidth / 2 ? true : false
-
-        // Check if new xDelta will make joystick to be beyond screen boundaries or can cause a misclick
-        if (!limitOffset && isRightJoystick && touchPoints[0].x  <= maxDelta || !limitOffset && !isRightJoystick && touchPoints[0].x >= maxDelta) {
-            xPositionDelta = touchPoints[0].x - _centerXY
-        } else if (limitOffset && !isRightJoystick && touchPoints[0].x >= _centerXY * 0.25 && touchPoints[0].x <= _centerXY * 2) { // more offset at the side near to the center
-            xPositionDelta = touchPoints[0].x - _centerXY
-        } else if (limitOffset && isRightJoystick && touchPoints[0].x >= 0 && touchPoints[0].x <= _centerXY * 1.75) {
-            xPositionDelta = touchPoints[0].x - _centerXY
-        } else {
-            return;
-        }
-
+        // Always enable touch tracking — axis updates must not depend on
+        // the cosmetic repositioning logic below.
         if (yAxisPositiveRangeOnly) {
             yPositionDelta = touchPoints[0].y - stickPositionY
         } else {
             yPositionDelta = touchPoints[0].y - _centerXY
         }
-        // We need to wait until we move the control to the right position before we process touch points
         _processTouchPoints = true
+
+        // Cosmetic: try to reposition the joystick center around the touch
+        // point, respecting screen boundaries.  If no condition matches the
+        // joystick stays at its current visual position — touch tracking
+        // still works because _processTouchPoints is already true.
+        var limitOffset = uiRealX >= _joyRoot.width / 2 ? true : false
+        var maxDelta = _joyRoot.x > uiTotalWidth / 2  ? uiTotalWidth - uiRealX - _joyRoot.x - _centerXY : uiRealX
+        var isRightJoystick = _joyRoot.x > uiTotalWidth / 2 ? true : false
+
+        if (!limitOffset && isRightJoystick && touchPoints[0].x  <= maxDelta || !limitOffset && !isRightJoystick && touchPoints[0].x >= maxDelta) {
+            xPositionDelta = touchPoints[0].x - _centerXY
+        } else if (limitOffset && !isRightJoystick && touchPoints[0].x >= _centerXY * 0.25 && touchPoints[0].x <= _centerXY * 2) {
+            xPositionDelta = touchPoints[0].x - _centerXY
+        } else if (limitOffset && isRightJoystick && touchPoints[0].x >= 0 && touchPoints[0].x <= _centerXY * 1.75) {
+            xPositionDelta = touchPoints[0].x - _centerXY
+        }
     }
 
     /*
