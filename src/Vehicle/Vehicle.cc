@@ -1734,10 +1734,14 @@ void Vehicle::_sendQGCTimeToVehicle()
 void Vehicle::virtualTabletJoystickValue(double roll, double pitch, double yaw, double thrust)
 {
     static int s_callCount = 0;
-    if (s_callCount++ % 250 == 0) {
-        qWarning() << "[Vehicle] virtualTabletJoystickValue called: r=" << roll
+    if (s_callCount++ % 25 == 0) {
+        qWarning() << "[Vehicle] virtualTabletJoystickValue: r=" << roll
                    << "p=" << pitch << "y=" << yaw << "t=" << thrust
-                   << "id=" << id();
+                   << "id=" << id()
+#ifdef QGC_ENABLE_DDS
+                   << "dds=" << (_ddsManualControlPublisher ? (_ddsManualControlPublisher->isReady() ? "ready" : "notReady") : "null")
+#endif
+                   ;
     }
 
     // The following if statement prevents the virtualTabletJoystick from sending values if the standard joystick is enabled

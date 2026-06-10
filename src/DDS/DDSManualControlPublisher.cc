@@ -99,10 +99,13 @@ bool DDSManualControlPublisher::sendManualControl(float roll, float pitch,
 
     const dds_return_t rc = dds_write(_writer, &msg);
 
-    if (_sendCount++ % 50 == 0) {
-        qCDebug(DDSManualControlLog) << "Sending manual control: r=" << roll
-                                     << "p=" << pitch << "y=" << yaw
-                                     << "t=" << throttle << "rc=" << rc;
+    if (_sendCount++ % 25 == 0) {
+        dds_instance_handle_t ihs[16];
+        const dds_return_t nMatched = dds_get_matched_subscriptions(_writer, ihs, 16);
+        qWarning() << "[DDSManualControl] send: r=" << roll
+                   << "p=" << pitch << "y=" << yaw
+                   << "t=" << throttle << "rc=" << rc
+                   << "matched=" << nMatched;
     }
 
     return rc == DDS_RETCODE_OK;
