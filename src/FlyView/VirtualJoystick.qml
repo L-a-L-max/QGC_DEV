@@ -16,9 +16,14 @@ Item {
     property real  uiTotalWidth:           0
     property real  uiRealX:                 0
 
+    Component.onCompleted: console.warn("[VirtualJoystick] Component loaded, timer running=" +
+        QGroundControl.settingsManager.appSettings.virtualJoystick.value +
+        " activeVehicle=" + (_activeVehicle ? "yes" : "null"))
+
     Timer {
+        id: joystickTimer
         interval:   40  // 25Hz, same as real joystick rate
-        running:    QGroundControl.settingsManager.appSettings.virtualJoystick.value
+        running:    _activeVehicle !== null && _activeVehicle !== undefined
         repeat:     true
         onTriggered: {
             if (_activeVehicle) {
@@ -26,6 +31,7 @@ Item {
             }
             leftYAxisValue = leftStick.yAxis // We keep Y axis value from the throttle stick for using it while there is a resize
         }
+        onRunningChanged: console.warn("[VirtualJoystick] Timer running changed to: " + running)
     }
 
     onHeightChanged:        { keepYAxisWhileChanged() }

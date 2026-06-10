@@ -1733,6 +1733,13 @@ void Vehicle::_sendQGCTimeToVehicle()
 
 void Vehicle::virtualTabletJoystickValue(double roll, double pitch, double yaw, double thrust)
 {
+    static int s_callCount = 0;
+    if (s_callCount++ % 250 == 0) {
+        qWarning() << "[Vehicle] virtualTabletJoystickValue called: r=" << roll
+                   << "p=" << pitch << "y=" << yaw << "t=" << thrust
+                   << "id=" << _id;
+    }
+
     // The following if statement prevents the virtualTabletJoystick from sending values if the standard joystick is enabled
     bool isActiveVehicle = (MultiVehicleManager::instance()->activeVehicle() == this);
     bool joystickEnabled = isActiveVehicle && JoystickManager::instance()->activeJoystickEnabledForActiveVehicle();
