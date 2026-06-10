@@ -97,7 +97,7 @@ bool DDSManualControlPublisher::sendManualControl(float roll, float pitch,
         return false;
     }
 
-    const auto *settings = SettingsManager::instance()->appSettings();
+    auto *settings = SettingsManager::instance()->appSettings();
     const float maxSpeed = static_cast<float>(settings->virtualJoystickMaxSpeed()->rawValue().toDouble());
     const float deadzone = static_cast<float>(settings->virtualJoystickDeadzone()->rawValue().toDouble());
     const float expo     = static_cast<float>(settings->virtualJoystickExpo()->rawValue().toDouble());

@@ -263,9 +263,9 @@ void DDSDataInjector::_updateVehicleState(const QHash<QString, QVariant> &fields
             _vehicle->_armed = armed;
             emit _vehicle->armedChanged(armed);
             if (armed) {
-                _vehicle->trajectoryPoints()->start();
+                _vehicle->_trajectoryPoints->start();
             } else {
-                _vehicle->trajectoryPoints()->stop();
+                _vehicle->_trajectoryPoints->stop();
             }
         }
     }
