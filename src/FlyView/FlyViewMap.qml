@@ -259,6 +259,60 @@ FlightMap {
         }
     }
 
+    // DDS Mission waypoint markers and route polyline
+    MapPolyline {
+        id:         ddsMissionPolyline
+        line.width: 2
+        line.color: "cyan"
+        z:          QGroundControl.zOrderTrajectoryLines
+        visible:    !pipMode && _ddsMissionMgr !== null && _ddsMissionWpCount > 0
+    }
+
+    Repeater {
+        model: _ddsMissionWpCount
+
+        MapQuickItem {
+            coordinate: _ddsMissionMgr
+                ? QtPositioning.coordinate(_ddsMissionMgr.waypointLatitude(index),
+                                           _ddsMissionMgr.waypointLongitude(index))
+                : QtPositioning.coordinate(0, 0)
+            anchorPoint.x: wpLabel.width / 2
+            anchorPoint.y: wpLabel.height / 2
+            z: QGroundControl.zOrderMapItems
+            visible: !pipMode
+
+            sourceItem: MissionItemIndexLabel {
+                id:         wpLabel
+                checked:    index === (_ddsMissionMgr ? _ddsMissionMgr.currentWaypointIndex : -1)
+                index:      index
+                label:      qsTr("WP%1").arg(index + 1)
+            }
+        }
+    }
+
+    property var _ddsMissionMgr: _activeVehicle ? _activeVehicle.ddsMissionManager() : null
+    property int _ddsMissionWpCount: _ddsMissionMgr ? _ddsMissionMgr.waypointCount : 0
+
+    Connections {
+        target: _ddsMissionMgr
+        function onWaypointsChanged() {
+            _ddsMissionWpCount = _ddsMissionMgr ? _ddsMissionMgr.waypointCount : 0
+            _updateDdsMissionPolyline()
+        }
+    }
+
+    function _updateDdsMissionPolyline() {
+        var path = []
+        if (_ddsMissionMgr) {
+            for (var i = 0; i < _ddsMissionWpCount; i++) {
+                path.push(QtPositioning.coordinate(
+                    _ddsMissionMgr.waypointLatitude(i),
+                    _ddsMissionMgr.waypointLongitude(i)))
+            }
+        }
+        ddsMissionPolyline.path = path
+    }
+
     // Add the vehicles to the map
     MapItemView {
         model: QGroundControl.multiVehicleManager.vehicles
@@ -740,6 +794,24 @@ FlightMap {
                         onClicked: {
                             mapClickDropPanel.close()
                             globals.guidedControllerFlyView.confirmAction(globals.guidedControllerFlyView.actionChangeHeading, mapClickCoord)
+                        }
+                    }
+
+                    QGCButton {
+                        Layout.fillWidth:   true
+                        text:               qsTr("Add DDS Waypoint")
+                        visible: {
+                            var v = QGroundControl.multiVehicleManager.activeVehicle
+                            return v ? v.ddsMissionManager() !== null : false
+                        }
+                        onClicked: {
+                            mapClickDropPanel.close()
+                            var v = QGroundControl.multiVehicleManager.activeVehicle
+                            if (v && v.ddsMissionManager()) {
+                                v.ddsMissionManager().addWaypoint(
+                                    mapClickCoord.latitude, mapClickCoord.longitude,
+                                    10.0, -1.0, NaN, 0.0)
+                            }
                         }
                     }
 

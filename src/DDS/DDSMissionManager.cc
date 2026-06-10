@@ -102,6 +102,28 @@ void DDSMissionManager::updateWaypoint(int index, double lat, double lon, float 
     emit waypointsChanged();
 }
 
+// ---- QML Accessors ----
+
+double DDSMissionManager::waypointLatitude(int index) const
+{
+    return (index >= 0 && index < _waypoints.size()) ? _waypoints[index].latitude : 0.0;
+}
+
+double DDSMissionManager::waypointLongitude(int index) const
+{
+    return (index >= 0 && index < _waypoints.size()) ? _waypoints[index].longitude : 0.0;
+}
+
+float DDSMissionManager::waypointAltitude(int index) const
+{
+    return (index >= 0 && index < _waypoints.size()) ? _waypoints[index].altitude : 0.0f;
+}
+
+float DDSMissionManager::waypointSpeed(int index) const
+{
+    return (index >= 0 && index < _waypoints.size()) ? _waypoints[index].speed : -1.0f;
+}
+
 // ---- Mission Control ----
 
 void DDSMissionManager::startMission()

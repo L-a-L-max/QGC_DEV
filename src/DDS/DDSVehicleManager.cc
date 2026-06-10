@@ -112,6 +112,7 @@ void DDSVehicleManager::_createVehicle(int vehicleType)
 
             // Wire mission manager to receive position/home updates
             _link->dataInjector()->setMissionManager(_link->missionManager());
+            vehicle->setDDSMissionManager(_link->missionManager());
             qInfo() << "[DDSVehicleManager] Attached DDSMissionManager";
 
             // Bridge DDS command ACKs to Vehicle::mavCommandResult so that

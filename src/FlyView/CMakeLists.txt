@@ -11,6 +11,7 @@ qt_add_qml_module(FlyViewModule
     RESOURCE_PREFIX /qml
     QML_FILES
         CustomGuidedActionsController.qml
+        DDSPlanPanel.qml
         DefaultChecklist.qml
         FixedWingChecklist.qml
         FlightDisplayViewDummy.qml

@@ -156,6 +156,35 @@ Item {
             visible:            false
         }
 
+        // DDS Mission Planning Panel (toggle button + side panel)
+        property bool _ddsPlanPanelVisible: false
+
+        QGCButton {
+            id:                 ddsPlanButton
+            anchors.right:      ddsPlanPanel.visible ? ddsPlanPanel.left : parent.right
+            anchors.rightMargin: ddsPlanPanel.visible ? _toolsMargin : _toolsMargin
+            anchors.top:        parent.top
+            anchors.topMargin:  toolbar.height + _toolsMargin
+            z:                  QGroundControl.zOrderWidgets
+            text:               qsTr("Mission")
+            visible:            _activeVehicle && !QGroundControl.videoManager.fullScreen
+            onClicked:          _ddsPlanPanelVisible = !_ddsPlanPanelVisible
+        }
+
+        DDSPlanPanel {
+            id:                 ddsPlanPanel
+            anchors.right:      parent.right
+            anchors.top:        parent.top
+            anchors.bottom:     parent.bottom
+            anchors.topMargin:  toolbar.height + _toolsMargin
+            anchors.rightMargin: _toolsMargin
+            anchors.bottomMargin: _toolsMargin
+            z:                  QGroundControl.zOrderWidgets
+            visible:            _ddsPlanPanelVisible && _activeVehicle
+
+            onClosePanel:       _ddsPlanPanelVisible = false
+        }
+
         Loader {
             id:             viewer3DLoader
             z:              1

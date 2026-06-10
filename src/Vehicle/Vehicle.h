@@ -83,6 +83,7 @@ class VehicleObjectAvoidance;
 class VehicleSupports;
 class DDSCommandPublisher;
 class DDSManualControlPublisher;
+class DDSMissionManager;
 
 class Vehicle : public VehicleFactGroup, public VehicleTypes
 {
@@ -589,6 +590,8 @@ public:
     DDSCommandPublisher *ddsCommandPublisher() const { return _ddsCommandPublisher; }
     void setDDSManualControlPublisher(DDSManualControlPublisher *publisher) { _ddsManualControlPublisher = publisher; }
     DDSManualControlPublisher *ddsManualControlPublisher() const { return _ddsManualControlPublisher; }
+    void setDDSMissionManager(DDSMissionManager *mgr) { _ddsMissionManager = mgr; }
+    Q_INVOKABLE DDSMissionManager *ddsMissionManager() const { return _ddsMissionManager; }
 #endif
 
     static void showCommandAckError(const mavlink_command_ack_t& ack);
@@ -962,6 +965,7 @@ private:
 #ifdef QGC_ENABLE_DDS
     DDSCommandPublisher *_ddsCommandPublisher               = nullptr;
     DDSManualControlPublisher *_ddsManualControlPublisher    = nullptr;
+    DDSMissionManager *_ddsMissionManager                    = nullptr;
 #endif
     VehicleSigningController* _signingController            = nullptr;
     std::atomic<bool> _joystickAuxRcOverrideActive           = false;

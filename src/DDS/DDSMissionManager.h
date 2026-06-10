@@ -69,6 +69,12 @@ public:
     Q_INVOKABLE void clearWaypoints();
     Q_INVOKABLE void updateWaypoint(int index, double lat, double lon, float alt, float speed, float heading, float hover);
 
+    // QML accessors for waypoint data
+    Q_INVOKABLE double waypointLatitude(int index) const;
+    Q_INVOKABLE double waypointLongitude(int index) const;
+    Q_INVOKABLE float  waypointAltitude(int index) const;
+    Q_INVOKABLE float  waypointSpeed(int index) const;
+
     // Mission control
     Q_INVOKABLE void startMission();
     Q_INVOKABLE void pauseMission();
