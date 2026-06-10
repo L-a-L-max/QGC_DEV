@@ -5,6 +5,7 @@
 
 #include <QtCore/QDebug>
 #include <QtCore/QDateTime>
+#include <QtCore/QElapsedTimer>
 
 #include <cstring>
 
@@ -75,14 +76,16 @@ bool DDSManualControlPublisher::sendManualControl(float roll, float pitch,
                                                   float yaw, float throttle)
 {
     if (_writer <= 0) {
+        qCWarning(DDSManualControlLog) << "sendManualControl called but writer not ready";
         return false;
     }
 
     px4_msgs_msg_dds__ManualControlSetpoint_ msg;
     memset(&msg, 0, sizeof(msg));
 
-    msg.timestamp = 0;
-    msg.timestamp_sample = 0;
+    const uint64_t nowUs = static_cast<uint64_t>(QDateTime::currentMSecsSinceEpoch()) * 1000ULL;
+    msg.timestamp = nowUs;
+    msg.timestamp_sample = nowUs;
     msg.valid = true;
     msg.data_source = 2;  // SOURCE_MAVLINK_0
 
@@ -95,6 +98,13 @@ bool DDSManualControlPublisher::sendManualControl(float roll, float pitch,
                          yaw != 0.0f || throttle != 0.0f);
 
     const dds_return_t rc = dds_write(_writer, &msg);
+
+    if (_sendCount++ % 50 == 0) {
+        qCDebug(DDSManualControlLog) << "Sending manual control: r=" << roll
+                                     << "p=" << pitch << "y=" << yaw
+                                     << "t=" << throttle << "rc=" << rc;
+    }
+
     return rc == DDS_RETCODE_OK;
 }
 

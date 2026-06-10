@@ -31,6 +31,7 @@ public:
 private:
     dds_entity_t _writer = DDS_ENTITY_NIL;
     dds_entity_t _topic  = DDS_ENTITY_NIL;
+    uint64_t     _sendCount = 0;
 };
 
 #endif // QGC_ENABLE_DDS

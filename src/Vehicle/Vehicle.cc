@@ -1745,6 +1745,12 @@ void Vehicle::virtualTabletJoystickValue(double roll, double pitch, double yaw, 
                 static_cast<float>(yaw),
                 static_cast<float>(thrust));
             return;
+        } else {
+            static int s_ddsWarnCount = 0;
+            if (s_ddsWarnCount++ % 250 == 0) {
+                qWarning() << "[Vehicle] virtualTabletJoystick: DDS publisher"
+                           << (_ddsManualControlPublisher ? "not ready" : "null");
+            }
         }
 #endif
         sendJoystickDataThreadSafe(

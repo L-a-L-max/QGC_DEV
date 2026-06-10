@@ -11,7 +11,6 @@ Item {
     id: virtualJoysticks
 
     property var   _activeVehicle:            QGroundControl.multiVehicleManager.activeVehicle
-    property bool  _initialConnectComplete:   _activeVehicle ? _activeVehicle.initialConnectComplete : false
     property real  leftYAxisValue:            autoCenterThrottle ? height / 2 : height
     property var   calibration:               false
     property real  uiTotalWidth:           0
@@ -22,7 +21,7 @@ Item {
         running:    QGroundControl.settingsManager.appSettings.virtualJoystick.value
         repeat:     true
         onTriggered: {
-            if (_activeVehicle && _initialConnectComplete) {
+            if (_activeVehicle) {
                 leftHandedMode ? _activeVehicle.virtualTabletJoystickValue(leftStick.xAxis, leftStick.yAxis, rightStick.xAxis, rightStick.yAxis) : _activeVehicle.virtualTabletJoystickValue(rightStick.xAxis, rightStick.yAxis, leftStick.xAxis, leftStick.yAxis)
             }
             leftYAxisValue = leftStick.yAxis // We keep Y axis value from the throttle stick for using it while there is a resize
