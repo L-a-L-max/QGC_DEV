@@ -160,6 +160,7 @@ if(QGC_ENABLE_DDS)
         FILES
             "${CMAKE_SOURCE_DIR}/resources/dds_mappings/_default.json"
             "${CMAKE_SOURCE_DIR}/resources/dds_mappings/_vendor_template.json"
+            "${CMAKE_SOURCE_DIR}/resources/dds_mappings/cuav_x7pro.json"
     )
 endif()
 

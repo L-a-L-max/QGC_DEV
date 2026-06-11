@@ -43,6 +43,7 @@ set(QGC_DDS_SOURCES
 set(QGC_DDS_RESOURCES
     resources/dds_mappings/_default.json
     resources/dds_mappings/_vendor_template.json
+    resources/dds_mappings/cuav_x7pro.json
 )
 
 # Generate a .qrc file for the DDS mappings

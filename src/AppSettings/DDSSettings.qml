@@ -29,13 +29,17 @@ ColumnLayout {
     RowLayout {
         spacing: _colSpacing
 
-        QGCLabel { text: qsTr("Vendor Mapping") }
-        QGCTextField {
-            id:                     vendorField
-            text:                   subEditConfig.vendorMapping
+        QGCLabel { text: qsTr("DDS Profile") }
+        QGCComboBox {
+            id:                     profileCombo
             Layout.preferredWidth:  _secondColumnWidth
-            placeholderText:        qsTr("Leave empty for default PX4")
-            onTextChanged:          subEditConfig.vendorMapping = vendorField.text
+            model:                  ["PX4 SITL (default)", "CUAV X7+ Pro"]
+            property var profileValues: ["", "cuav_x7pro"]
+            currentIndex:           profileValues.indexOf(subEditConfig.vendorMapping) >= 0
+                                        ? profileValues.indexOf(subEditConfig.vendorMapping) : 0
+            onActivated: function(idx) {
+                subEditConfig.vendorMapping = profileValues[idx]
+            }
         }
     }
 
@@ -68,7 +72,7 @@ ColumnLayout {
         font.pointSize:         ScreenTools.smallFontPointSize
         wrapMode:               Text.WordWrap
         text:                   qsTr("DDS link connects to PX4 flight controllers via CycloneDDS. "
-                                     + "The vendor mapping selects which JSON topic-mapping table to load. "
+                                     + "Select 'PX4 SITL' for simulation or 'CUAV X7+ Pro' for real hardware. "
                                      + "Domain ID must match the PX4 DDS domain (default 0).")
     }
 }

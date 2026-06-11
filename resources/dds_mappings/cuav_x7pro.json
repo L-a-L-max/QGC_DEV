@@ -1,0 +1,303 @@
+{
+  "vendor": "cuav_x7pro",
+  "version": "1.0.0",
+  "description": "CUAV X7+ Pro flight controller DDS topic mapping. Based on PX4 standard but without _v1 suffix on some topics. Compatible with CUAV firmware based on PX4 v1.14-v1.15.",
+  "topics": [
+    {
+      "dds_topic": "/fmu/out/vehicle_attitude",
+      "dds_type": "px4_msgs::msg::dds_::VehicleAttitude_",
+      "fact_group": "vehicle",
+      "description": "Vehicle attitude quaternion → roll/pitch/heading in degrees",
+      "fields": [
+        {
+          "dds_field": "q[0]",
+          "fact_name": "roll",
+          "transform": "quaternion_to_euler_roll",
+          "description": "Quaternion w,x,y,z → roll angle (degrees)"
+        },
+        {
+          "dds_field": "q[0]",
+          "fact_name": "pitch",
+          "transform": "quaternion_to_euler_pitch",
+          "description": "Quaternion w,x,y,z → pitch angle (degrees)"
+        },
+        {
+          "dds_field": "q[0]",
+          "fact_name": "heading",
+          "transform": "quaternion_to_euler_yaw",
+          "description": "Quaternion w,x,y,z → yaw/heading [0,360) (degrees)"
+        }
+      ]
+    },
+    {
+      "dds_topic": "/fmu/out/vehicle_global_position",
+      "dds_type": "px4_msgs::msg::dds_::VehicleGlobalPosition_",
+      "description": "Global position (lat/lon/alt). Also updates Vehicle coordinate for map display.",
+      "fields": [
+        {
+          "dds_field": "lat",
+          "fact_group": "gps",
+          "fact_name": "lat",
+          "description": "Latitude in decimal degrees (float64 from PX4)"
+        },
+        {
+          "dds_field": "lon",
+          "fact_group": "gps",
+          "fact_name": "lon",
+          "description": "Longitude in decimal degrees (float64 from PX4)"
+        },
+        {
+          "dds_field": "alt",
+          "fact_group": "vehicle",
+          "fact_name": "altitudeAMSL",
+          "description": "Altitude above mean sea level (meters)"
+        }
+      ]
+    },
+    {
+      "dds_topic": "/fmu/out/vehicle_local_position",
+      "dds_type": "px4_msgs::msg::dds_::VehicleLocalPosition_",
+      "description": "Local NED position and velocity (CUAV: no _v1 suffix)",
+      "fields": [
+        {
+          "dds_field": "x",
+          "fact_group": "localPosition",
+          "fact_name": "x",
+          "description": "Local X position in NED frame (meters)"
+        },
+        {
+          "dds_field": "y",
+          "fact_group": "localPosition",
+          "fact_name": "y",
+          "description": "Local Y position in NED frame (meters)"
+        },
+        {
+          "dds_field": "z",
+          "fact_group": "localPosition",
+          "fact_name": "z",
+          "transform": "negate",
+          "description": "Local Z position: NED z (down) → positive up"
+        },
+        {
+          "dds_field": "vx",
+          "fact_group": "localPosition",
+          "fact_name": "vx",
+          "description": "Local velocity X (m/s)"
+        },
+        {
+          "dds_field": "vy",
+          "fact_group": "localPosition",
+          "fact_name": "vy",
+          "description": "Local velocity Y (m/s)"
+        },
+        {
+          "dds_field": "vz",
+          "fact_group": "localPosition",
+          "fact_name": "vz",
+          "transform": "negate",
+          "description": "Local velocity Z: NED → positive up (m/s)"
+        },
+        {
+          "dds_field": "vx",
+          "fact_group": "vehicle",
+          "fact_name": "groundSpeed",
+          "transform": "ground_speed_from_vxy",
+          "description": "Ground speed from sqrt(vx² + vy²) (m/s)"
+        },
+        {
+          "dds_field": "vz",
+          "fact_group": "vehicle",
+          "fact_name": "climbRate",
+          "transform": "negate",
+          "description": "Climb rate: NED vz negated → positive up (m/s)"
+        },
+        {
+          "dds_field": "z",
+          "fact_group": "vehicle",
+          "fact_name": "altitudeRelative",
+          "transform": "negate",
+          "description": "Relative altitude from local z (NED down → positive up)"
+        }
+      ]
+    },
+    {
+      "dds_topic": "/fmu/out/vehicle_gps_position",
+      "dds_type": "px4_msgs::msg::dds_::SensorGps_",
+      "fact_group": "gps",
+      "description": "Raw GPS sensor data (hdop, vdop, satellites, fix type)",
+      "fields": [
+        {
+          "dds_field": "hdop",
+          "fact_name": "hdop",
+          "description": "Horizontal dilution of precision"
+        },
+        {
+          "dds_field": "vdop",
+          "fact_name": "vdop",
+          "description": "Vertical dilution of precision"
+        },
+        {
+          "dds_field": "satellites_used",
+          "fact_name": "count",
+          "description": "Number of satellites used in fix"
+        },
+        {
+          "dds_field": "fix_type",
+          "fact_name": "lock",
+          "description": "GPS fix type (0=no fix, 2=2D, 3=3D, 4=DGPS, 5=RTK float, 6=RTK fixed)"
+        },
+        {
+          "dds_field": "cog_rad",
+          "fact_name": "courseOverGround",
+          "transform": "rad_to_deg",
+          "description": "Course over ground (direction of movement) in degrees"
+        }
+      ]
+    },
+    {
+      "dds_topic": "/fmu/out/battery_status",
+      "dds_type": "px4_msgs::msg::dds_::BatteryStatus_",
+      "fact_group": "battery",
+      "description": "Battery status (CUAV: no _v1 suffix)",
+      "fields": [
+        {
+          "dds_field": "voltage_v",
+          "fact_name": "voltage",
+          "description": "Battery voltage (volts)"
+        },
+        {
+          "dds_field": "current_a",
+          "fact_name": "current",
+          "description": "Battery current (amps, negative = discharging)"
+        },
+        {
+          "dds_field": "remaining",
+          "fact_name": "percentRemaining",
+          "scale": 100.0,
+          "description": "Battery remaining: 0.0-1.0 → 0-100%"
+        },
+        {
+          "dds_field": "temperature",
+          "fact_name": "temperature",
+          "description": "Battery temperature (Celsius)"
+        },
+        {
+          "dds_field": "discharged_mah",
+          "fact_name": "mahConsumed",
+          "description": "Consumed charge (mAh)"
+        }
+      ]
+    },
+    {
+      "dds_topic": "/fmu/out/airspeed_validated",
+      "dds_type": "px4_msgs::msg::dds_::AirspeedValidated_",
+      "fact_group": "vehicle",
+      "description": "Validated airspeed (CUAV: no _v1 suffix)",
+      "fields": [
+        {
+          "dds_field": "calibrated_airspeed_m_s",
+          "fact_name": "airSpeed",
+          "description": "Calibrated airspeed (m/s)"
+        }
+      ]
+    },
+    {
+      "dds_topic": "/fmu/out/sensor_combined",
+      "dds_type": "px4_msgs::msg::dds_::SensorCombined_",
+      "fact_group": "vehicle",
+      "description": "Gyroscope angular rates → rollRate/pitchRate/yawRate",
+      "fields": [
+        {
+          "dds_field": "gyro_rad[0]",
+          "fact_name": "rollRate",
+          "transform": "rad_to_deg",
+          "description": "Roll rate from gyro (deg/s)"
+        },
+        {
+          "dds_field": "gyro_rad[1]",
+          "fact_name": "pitchRate",
+          "transform": "rad_to_deg",
+          "description": "Pitch rate from gyro (deg/s)"
+        },
+        {
+          "dds_field": "gyro_rad[2]",
+          "fact_name": "yawRate",
+          "transform": "rad_to_deg",
+          "description": "Yaw rate from gyro (deg/s)"
+        }
+      ]
+    },
+    {
+      "dds_topic": "/fmu/out/manual_control_setpoint",
+      "dds_type": "px4_msgs::msg::dds_::ManualControlSetpoint_",
+      "fact_group": "vehicle",
+      "description": "Manual control input from RC or joystick",
+      "fields": [
+        {
+          "dds_field": "throttle",
+          "fact_name": "throttlePct",
+          "scale": 100.0,
+          "description": "Throttle percentage: 0.0-1.0 → 0-100%"
+        }
+      ]
+    },
+    {
+      "dds_topic": "/fmu/out/estimator_status_flags",
+      "dds_type": "px4_msgs::msg::dds_::EstimatorStatusFlags_",
+      "fact_group": "estimatorStatus",
+      "description": "EKF estimator status flags",
+      "fields": [
+        {
+          "dds_field": "cs_pos_horiz_abs",
+          "fact_name": "goodHorizPosAbsEstimate",
+          "description": "Good horizontal absolute position estimate"
+        },
+        {
+          "dds_field": "cs_pos_vert_abs",
+          "fact_name": "goodVertPosAbsEstimate",
+          "description": "Good vertical absolute position estimate"
+        },
+        {
+          "dds_field": "cs_gps_glitch",
+          "fact_name": "gpsGlitch",
+          "description": "GPS glitch detected"
+        }
+      ]
+    },
+    {
+      "dds_topic": "/fmu/out/vehicle_status_v1",
+      "dds_type": "px4_msgs::msg::dds_::VehicleStatus_",
+      "fact_group": "_internal",
+      "description": "Vehicle status — handled directly by DDSDataInjector (armed state, nav_state). No Fact injection.",
+      "fields": []
+    },
+    {
+      "dds_topic": "/fmu/out/home_position",
+      "dds_type": "px4_msgs::msg::dds_::HomePosition_",
+      "fact_group": "_internal",
+      "description": "Home position (CUAV: no _v1 suffix) — handled by DDSDataInjector.",
+      "fields": []
+    },
+    {
+      "dds_topic": "/fmu/out/vehicle_land_detected",
+      "dds_type": "px4_msgs::msg::dds_::VehicleLandDetected_",
+      "fact_group": "_internal",
+      "description": "Land detection — handled by DDSDataInjector to set Vehicle flying/landing state.",
+      "fields": []
+    },
+    {
+      "dds_topic": "/fmu/out/failsafe_flags",
+      "dds_type": "px4_msgs::msg::dds_::FailsafeFlags_",
+      "fact_group": "_internal",
+      "description": "Failsafe flags — handled by DDSDataInjector to determine ready-to-fly status.",
+      "fields": []
+    },
+    {
+      "dds_topic": "/fmu/out/vehicle_command_ack",
+      "dds_type": "px4_msgs::msg::dds_::VehicleCommandAck_",
+      "fact_group": "_internal",
+      "description": "Command acknowledgement — handled by DDSDataInjector for command result feedback.",
+      "fields": []
+    }
+  ]
+}
