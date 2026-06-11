@@ -19,6 +19,8 @@ Rectangle {
     property int _currentWp:    _missionMgr ? _missionMgr.currentWaypointIndex : -1
     property int _state:        _missionMgr ? _missionMgr.state : 0
 
+    property int _editingIndex: -1  // Which waypoint is being edited (-1 = none)
+
     signal addWaypointFromMap()
     signal closePanel()
 
@@ -91,51 +93,148 @@ Rectangle {
                 model:          _wpCount
                 spacing:        2
                 delegate: Rectangle {
+                    id: wpDelegate
                     width:  wpList.width
-                    height: wpRow.height + ScreenTools.defaultFontPixelHeight / 2
+                    height: wpCol.height + ScreenTools.defaultFontPixelHeight / 4
                     color:  index === _currentWp ? qgcPal.buttonHighlight : qgcPal.windowShadeDark
                     radius: ScreenTools.defaultFontPixelHeight / 4
 
-                    RowLayout {
-                        id:             wpRow
+                    property bool isEditing: _editingIndex === index
+
+                    Column {
+                        id:             wpCol
                         anchors.left:   parent.left
                         anchors.right:  parent.right
                         anchors.margins: ScreenTools.defaultFontPixelHeight / 4
                         anchors.verticalCenter: parent.verticalCenter
-                        spacing: ScreenTools.defaultFontPixelWidth
+                        spacing: 2
 
-                        QGCLabel {
-                            text: qsTr("WP%1").arg(index + 1)
-                            font.bold: index === _currentWp
-                            color: index === _currentWp ? qgcPal.buttonHighlightText : qgcPal.text
-                        }
+                        RowLayout {
+                            width: parent.width
+                            spacing: ScreenTools.defaultFontPixelWidth
 
-                        QGCLabel {
-                            text: _missionMgr ? qsTr("%1m").arg(_missionMgr.waypointAltitude(index).toFixed(0))
-                                              : ""
-                            color: index === _currentWp ? qgcPal.buttonHighlightText : qgcPal.text
-                            Layout.fillWidth: true
-                        }
+                            QGCLabel {
+                                text: qsTr("WP%1").arg(index + 1)
+                                font.bold: true
+                                color: index === _currentWp ? qgcPal.buttonHighlightText : qgcPal.text
+                            }
 
-                        QGCButton {
-                            text:       qsTr("Ins")
-                            enabled:    _state === stateIdle || _state === stateComplete
-                            onClicked:  {
-                                if (_missionMgr) {
-                                    var alt = parseFloat(altField.text) || 10.0
-                                    var spd = parseFloat(speedField.text) || -1.0
-                                    // Insert after this waypoint using vehicle position as placeholder
-                                    var lat = _missionMgr.waypointLatitude(index)
-                                    var lon = _missionMgr.waypointLongitude(index)
-                                    _missionMgr.insertWaypoint(index + 1, lat, lon, alt, spd, NaN, 0.0)
+                            QGCLabel {
+                                text: _missionMgr ? qsTr("%1m  %2m/s").arg(
+                                    _missionMgr.waypointAltitude(index).toFixed(0)).arg(
+                                    _missionMgr.waypointSpeed(index) < 0 ? "auto" :
+                                    _missionMgr.waypointSpeed(index).toFixed(1))
+                                    : ""
+                                color: index === _currentWp ? qgcPal.buttonHighlightText : qgcPal.text
+                                Layout.fillWidth: true
+                            }
+
+                            QGCButton {
+                                text:       qsTr("Ins")
+                                onClicked:  {
+                                    if (_missionMgr) {
+                                        var alt = parseFloat(altField.text) || 10.0
+                                        var spd = parseFloat(speedField.text) || -1.0
+                                        _missionMgr.insertWaypoint(index + 1,
+                                            _missionMgr.waypointLatitude(index),
+                                            _missionMgr.waypointLongitude(index),
+                                            alt, spd, NaN, 0.0)
+                                    }
+                                }
+                            }
+                            QGCButton {
+                                text:       qsTr("Del")
+                                enabled:    _state === stateIdle || _state === stateComplete || _state === statePaused
+                                onClicked:  {
+                                    if (_missionMgr) _missionMgr.removeWaypoint(index)
                                 }
                             }
                         }
-                        QGCButton {
-                            text:       qsTr("Del")
-                            enabled:    _state === stateIdle || _state === stateComplete
-                            onClicked:  {
-                                if (_missionMgr) _missionMgr.removeWaypoint(index)
+
+                        // Tap coordinate label to open edit mode
+                        QGCLabel {
+                            text: _missionMgr ? qsTr("  %1, %2").arg(
+                                _missionMgr.waypointLatitude(index).toFixed(6)).arg(
+                                _missionMgr.waypointLongitude(index).toFixed(6))
+                                : ""
+                            font.pointSize: ScreenTools.smallFontPointSize
+                            color: index === _currentWp ? qgcPal.buttonHighlightText : qgcPal.disabledText
+                            visible: !wpDelegate.isEditing
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: _editingIndex = index
+                            }
+                        }
+
+                        // Editable coordinate fields (shown when tapped)
+                        GridLayout {
+                            visible: wpDelegate.isEditing
+                            columns: 2
+                            columnSpacing: 4
+                            rowSpacing: 2
+                            width: parent.width
+
+                            QGCLabel { text: qsTr("Lat:"); font.pointSize: ScreenTools.smallFontPointSize }
+                            TextField {
+                                id: editLatField
+                                Layout.fillWidth: true
+                                font.pointSize: ScreenTools.smallFontPointSize
+                                text: _missionMgr ? _missionMgr.waypointLatitude(index).toFixed(7) : ""
+                                inputMethodHints: Qt.ImhFormattedNumbersOnly
+                                selectByMouse: true
+                                background: Rectangle { color: qgcPal.textField; border.color: qgcPal.groupBorder; radius: 2 }
+                                color: qgcPal.text
+                            }
+                            QGCLabel { text: qsTr("Lon:"); font.pointSize: ScreenTools.smallFontPointSize }
+                            TextField {
+                                id: editLonField
+                                Layout.fillWidth: true
+                                font.pointSize: ScreenTools.smallFontPointSize
+                                text: _missionMgr ? _missionMgr.waypointLongitude(index).toFixed(7) : ""
+                                inputMethodHints: Qt.ImhFormattedNumbersOnly
+                                selectByMouse: true
+                                background: Rectangle { color: qgcPal.textField; border.color: qgcPal.groupBorder; radius: 2 }
+                                color: qgcPal.text
+                            }
+                            QGCLabel { text: qsTr("Alt:"); font.pointSize: ScreenTools.smallFontPointSize }
+                            TextField {
+                                id: editAltField
+                                Layout.fillWidth: true
+                                font.pointSize: ScreenTools.smallFontPointSize
+                                text: _missionMgr ? _missionMgr.waypointAltitude(index).toFixed(1) : ""
+                                inputMethodHints: Qt.ImhFormattedNumbersOnly
+                                selectByMouse: true
+                                background: Rectangle { color: qgcPal.textField; border.color: qgcPal.groupBorder; radius: 2 }
+                                color: qgcPal.text
+                            }
+                        }
+
+                        // Save/Cancel buttons for edit mode
+                        RowLayout {
+                            visible: wpDelegate.isEditing
+                            width: parent.width
+                            spacing: ScreenTools.defaultFontPixelWidth
+
+                            Item { Layout.fillWidth: true }
+                            QGCButton {
+                                text: qsTr("Save")
+                                onClicked: {
+                                    if (_missionMgr) {
+                                        var lat = parseFloat(editLatField.text)
+                                        var lon = parseFloat(editLonField.text)
+                                        var alt = parseFloat(editAltField.text)
+                                        var spd = _missionMgr.waypointSpeed(index)
+                                        if (!isNaN(lat) && !isNaN(lon) && !isNaN(alt)) {
+                                            _missionMgr.updateWaypoint(index, lat, lon, alt, spd, NaN, 0.0)
+                                        }
+                                    }
+                                    _editingIndex = -1
+                                }
+                            }
+                            QGCButton {
+                                text: qsTr("Cancel")
+                                onClicked: _editingIndex = -1
                             }
                         }
                     }

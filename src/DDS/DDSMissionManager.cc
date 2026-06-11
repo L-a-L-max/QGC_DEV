@@ -12,6 +12,7 @@
 #include <QtPositioning/QGeoCoordinate>
 
 #include <cmath>
+#include <QDateTime>
 
 DDSMissionManager::DDSMissionManager(QObject *parent)
     : QObject(parent)
@@ -222,6 +223,7 @@ void DDSMissionManager::updateVehiclePosition(double lat, double lon, double alt
     _vehicleLat = lat;
     _vehicleLon = lon;
     _vehicleAlt = altAMSL;
+    _lastPositionUpdateTime = QDateTime::currentMSecsSinceEpoch();
     emit positionUpdated();
 }
 
@@ -323,6 +325,17 @@ void DDSMissionManager::_sendCurrentWaypoint()
 {
     if (_state != Running || _currentIndex < 0 || _currentIndex >= _waypoints.size()) return;
     if (!_cmdPub) return;
+
+    // Network timeout protection: if no position update for too long, pause mission
+    if (_lastPositionUpdateTime > 0) {
+        const qint64 elapsed = QDateTime::currentMSecsSinceEpoch() - _lastPositionUpdateTime;
+        if (elapsed > _positionTimeoutMs) {
+            qWarning() << "[DDSMission] Position update timeout (" << elapsed << "ms), pausing mission for safety";
+            emit missionError(QStringLiteral("Network timeout - mission paused"));
+            pauseMission();
+            return;
+        }
+    }
 
     const DDSWaypoint &wp = _waypoints[_currentIndex];
     const double wpAltAMSL = _homeAlt + static_cast<double>(wp.altitude);

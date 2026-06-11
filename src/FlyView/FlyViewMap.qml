@@ -269,37 +269,42 @@ FlightMap {
     }
 
     Repeater {
+        id: ddsWpRepeater
         model: _ddsMissionWpCount
 
-        MapQuickItem {
+        delegate: MapQuickItem {
+            id: wpMapItem
+            property int wpIndex: index
+            property bool isCurrent: wpIndex === (_ddsMissionMgr ? _ddsMissionMgr.currentWaypointIndex : -1)
+            property real markerSize: isCurrent ? 30 : 24
+
             coordinate: _ddsMissionMgr
-                ? QtPositioning.coordinate(_ddsMissionMgr.waypointLatitude(index),
-                                           _ddsMissionMgr.waypointLongitude(index))
+                ? QtPositioning.coordinate(_ddsMissionMgr.waypointLatitude(wpIndex),
+                                           _ddsMissionMgr.waypointLongitude(wpIndex))
                 : QtPositioning.coordinate(0, 0)
-            anchorPoint.x: _wpMarkerSize / 2
-            anchorPoint.y: _wpMarkerSize / 2
+            anchorPoint.x: markerSize / 2
+            anchorPoint.y: markerSize / 2
             z: QGroundControl.zOrderMapItems + 1
             visible: !pipMode && _ddsMissionMgr !== null
 
-            property real _wpMarkerSize: index === (_ddsMissionMgr ? _ddsMissionMgr.currentWaypointIndex : -1)
-                                         ? ScreenTools.defaultFontPixelHeight * 2.2
-                                         : ScreenTools.defaultFontPixelHeight * 1.8
+            sourceItem: Item {
+                width:  wpMapItem.markerSize
+                height: wpMapItem.markerSize
 
-            sourceItem: Rectangle {
-                width:  _wpMarkerSize
-                height: _wpMarkerSize
-                radius: _wpMarkerSize / 2
-                color:  index === (_ddsMissionMgr ? _ddsMissionMgr.currentWaypointIndex : -1)
-                        ? "#2ecc40" : "#e74c3c"
-                border.color: "white"
-                border.width: 2
+                Rectangle {
+                    anchors.fill: parent
+                    radius: width / 2
+                    color:  wpMapItem.isCurrent ? "#2ecc40" : "#e74c3c"
+                    border.color: "white"
+                    border.width: 2
 
-                Text {
-                    anchors.centerIn: parent
-                    text:   (index + 1).toString()
-                    color:  "white"
-                    font.pixelSize: parent.width * 0.5
-                    font.bold: true
+                    Text {
+                        anchors.centerIn: parent
+                        text:   (wpMapItem.wpIndex + 1).toString()
+                        color:  "white"
+                        font.pixelSize: 14
+                        font.bold: true
+                    }
                 }
             }
         }

@@ -135,6 +135,10 @@ private:
     float  _defaultAlt   = 10.0f;
     float  _defaultSpeed = -1.0f;
 
+    // Network resilience
+    qint64 _lastPositionUpdateTime = 0;
+    static constexpr qint64 _positionTimeoutMs = 10000; // 10s no position update = timeout
+
     QTimer _arrivalCheckTimer;
     QTimer _hoverTimer;
     QTimer _resendTimer;
