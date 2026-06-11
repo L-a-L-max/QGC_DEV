@@ -268,43 +268,34 @@ FlightMap {
         visible:    !pipMode && _ddsMissionMgr !== null && _ddsMissionWpCount > 0
     }
 
-    Repeater {
-        id: ddsWpRepeater
-        model: _ddsMissionWpCount
+    ListModel { id: ddsWpModel }
+
+    MapItemView {
+        model: ddsWpModel
 
         delegate: MapQuickItem {
-            id: wpMapItem
-            property int wpIndex: index
-            property bool isCurrent: wpIndex === (_ddsMissionMgr ? _ddsMissionMgr.currentWaypointIndex : -1)
-            property real markerSize: isCurrent ? 30 : 24
+            property bool isCurrent: model.wpIdx === (_ddsMissionMgr ? _ddsMissionMgr.currentWaypointIndex : -1)
 
-            coordinate: _ddsMissionMgr
-                ? QtPositioning.coordinate(_ddsMissionMgr.waypointLatitude(wpIndex),
-                                           _ddsMissionMgr.waypointLongitude(wpIndex))
-                : QtPositioning.coordinate(0, 0)
-            anchorPoint.x: markerSize / 2
-            anchorPoint.y: markerSize / 2
-            z: QGroundControl.zOrderMapItems + 1
-            visible: !pipMode && _ddsMissionMgr !== null
+            coordinate: QtPositioning.coordinate(model.lat, model.lon)
+            anchorPoint.x: 16
+            anchorPoint.y: 16
+            z: QGroundControl.zOrderMapItems + 2
+            visible: !pipMode
 
-            sourceItem: Item {
-                width:  wpMapItem.markerSize
-                height: wpMapItem.markerSize
+            sourceItem: Rectangle {
+                width:  isCurrent ? 36 : 28
+                height: width
+                radius: width / 2
+                color:  isCurrent ? "#2ecc40" : "#e74c3c"
+                border.color: "white"
+                border.width: 2
 
-                Rectangle {
-                    anchors.fill: parent
-                    radius: width / 2
-                    color:  wpMapItem.isCurrent ? "#2ecc40" : "#e74c3c"
-                    border.color: "white"
-                    border.width: 2
-
-                    Text {
-                        anchors.centerIn: parent
-                        text:   (wpMapItem.wpIndex + 1).toString()
-                        color:  "white"
-                        font.pixelSize: 14
-                        font.bold: true
-                    }
+                Text {
+                    anchors.centerIn: parent
+                    text:   (model.wpIdx + 1).toString()
+                    color:  "white"
+                    font.pixelSize: parent.width * 0.45
+                    font.bold: true
                 }
             }
         }
@@ -318,6 +309,10 @@ FlightMap {
         function onWaypointsChanged() {
             _ddsMissionWpCount = _ddsMissionMgr ? _ddsMissionMgr.waypointCount : 0
             _updateDdsMissionPolyline()
+            _rebuildWpModel()
+        }
+        function onCurrentWaypointChanged() {
+            _rebuildWpModel()
         }
     }
 
@@ -331,6 +326,19 @@ FlightMap {
             }
         }
         ddsMissionPolyline.path = path
+    }
+
+    function _rebuildWpModel() {
+        ddsWpModel.clear()
+        if (_ddsMissionMgr) {
+            for (var i = 0; i < _ddsMissionWpCount; i++) {
+                ddsWpModel.append({
+                    "wpIdx": i,
+                    "lat": _ddsMissionMgr.waypointLatitude(i),
+                    "lon": _ddsMissionMgr.waypointLongitude(i)
+                })
+            }
+        }
     }
 
     // Add the vehicles to the map
@@ -831,6 +839,38 @@ FlightMap {
                                 var alt = v.ddsMissionMgr.defaultAltitude
                                 var spd = v.ddsMissionMgr.defaultSpeed
                                 v.ddsMissionMgr.addWaypoint(
+                                    mapClickCoord.latitude, mapClickCoord.longitude,
+                                    alt, spd, NaN, 0.0)
+                            }
+                        }
+                    }
+
+                    QGCButton {
+                        Layout.fillWidth:   true
+                        text: {
+                            var v = QGroundControl.multiVehicleManager.activeVehicle
+                            if (v && v.ddsMissionMgr) {
+                                var idx = v.ddsMissionMgr.currentWaypointIndex
+                                if (idx >= 0)
+                                    return qsTr("Ins after WP%1").arg(idx + 1)
+                            }
+                            return qsTr("Ins DDS Waypoint")
+                        }
+                        visible: {
+                            var v = QGroundControl.multiVehicleManager.activeVehicle
+                            return v ? (v.ddsMissionMgr !== null && v.ddsMissionMgr.waypointCount > 0) : false
+                        }
+                        onClicked: {
+                            mapClickDropPanel.close()
+                            var v = QGroundControl.multiVehicleManager.activeVehicle
+                            if (v && v.ddsMissionMgr) {
+                                var mgr = v.ddsMissionMgr
+                                var alt = mgr.defaultAltitude
+                                var spd = mgr.defaultSpeed
+                                var insertIdx = mgr.currentWaypointIndex >= 0
+                                    ? mgr.currentWaypointIndex + 1
+                                    : mgr.waypointCount
+                                mgr.insertWaypoint(insertIdx,
                                     mapClickCoord.latitude, mapClickCoord.longitude,
                                     alt, spd, NaN, 0.0)
                             }
