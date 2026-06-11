@@ -137,12 +137,28 @@ Rectangle {
             }
         }
 
-        // Add waypoint button
+        // Add waypoint at vehicle position
         QGCButton {
             Layout.fillWidth: true
-            text:             qsTr("Add Waypoint (Click Map)")
-            enabled:          _state === stateIdle || _state === stateComplete
-            onClicked:        root.addWaypointFromMap()
+            text:             qsTr("Add WP at Vehicle Pos")
+            enabled:          _missionMgr && _activeVehicle && _activeVehicle.coordinate.isValid &&
+                              (_state === stateIdle || _state === stateComplete)
+            onClicked: {
+                if (_missionMgr && _activeVehicle) {
+                    var coord = _activeVehicle.coordinate
+                    var alt = parseFloat(altField.text) || 10.0
+                    var spd = parseFloat(speedField.text) || -1.0
+                    _missionMgr.addWaypoint(coord.latitude, coord.longitude, alt, spd, NaN, 0.0)
+                }
+            }
+        }
+
+        QGCLabel {
+            Layout.fillWidth: true
+            text:             qsTr("Or right-click map to add waypoint")
+            font.pointSize:   ScreenTools.smallFontPointSize
+            horizontalAlignment: Text.AlignHCenter
+            color:            qgcPal.text
         }
 
         // Waypoint settings

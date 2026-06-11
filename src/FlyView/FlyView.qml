@@ -48,6 +48,7 @@ Item {
 
     property real   _fullItemZorder:    0
     property real   _pipItemZorder:     QGroundControl.zOrderWidgets
+    property bool   _ddsPlanPanelVisible: false
 
     function _calcCenterViewPort() {
         var newToolInset = Qt.rect(0, 0, width, height)
@@ -157,7 +158,6 @@ Item {
         }
 
         // DDS Mission Planning Panel (toggle button + side panel)
-        property bool _ddsPlanPanelVisible: false
 
         QGCButton {
             id:                 ddsPlanButton

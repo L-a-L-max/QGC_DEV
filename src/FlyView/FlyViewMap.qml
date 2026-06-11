@@ -826,10 +826,11 @@ FlightMap {
     }
 
     onMapClicked: (position) => {
+        var hasDDSMission = _activeVehicle && _activeVehicle.ddsMissionManager() !== null
         if (!globals.guidedControllerFlyView.guidedUIVisible &&
             (globals.guidedControllerFlyView.showGotoLocation || globals.guidedControllerFlyView.showOrbit ||
              globals.guidedControllerFlyView.showROI || globals.guidedControllerFlyView.showSetHome ||
-             globals.guidedControllerFlyView.showSetEstimatorOrigin)) {
+             globals.guidedControllerFlyView.showSetEstimatorOrigin || hasDDSMission)) {
 
             position = Qt.point(position.x, position.y)
             var clickCoord = _root.toCoordinate(position, false /* clipToViewPort */)
