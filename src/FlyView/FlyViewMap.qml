@@ -284,8 +284,9 @@ FlightMap {
             sourceItem: MissionItemIndexLabel {
                 id:         wpLabel
                 checked:    index === (_ddsMissionMgr ? _ddsMissionMgr.currentWaypointIndex : -1)
-                index:      index
-                label:      qsTr("WP%1").arg(index + 1)
+                index:      index + 1
+                label:      ""
+                small:      !checked
             }
         }
     }
@@ -808,9 +809,11 @@ FlightMap {
                             mapClickDropPanel.close()
                             var v = QGroundControl.multiVehicleManager.activeVehicle
                             if (v && v.ddsMissionMgr) {
+                                var alt = v.ddsMissionMgr.defaultAltitude
+                                var spd = v.ddsMissionMgr.defaultSpeed
                                 v.ddsMissionMgr.addWaypoint(
                                     mapClickCoord.latitude, mapClickCoord.longitude,
-                                    10.0, -1.0, NaN, 0.0)
+                                    alt, spd, NaN, 0.0)
                             }
                         }
                     }

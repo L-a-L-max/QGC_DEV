@@ -29,6 +29,8 @@ class DDSMissionManager : public QObject
     Q_PROPERTY(int waypointCount READ waypointCount NOTIFY waypointsChanged)
     Q_PROPERTY(EndAction endAction READ endAction WRITE setEndAction NOTIFY endActionChanged)
     Q_PROPERTY(double distanceToWaypoint READ distanceToWaypoint NOTIFY positionUpdated)
+    Q_PROPERTY(float defaultAltitude READ defaultAltitude WRITE setDefaultAltitude NOTIFY defaultsChanged)
+    Q_PROPERTY(float defaultSpeed READ defaultSpeed WRITE setDefaultSpeed NOTIFY defaultsChanged)
 
 public:
     enum State {
@@ -59,6 +61,10 @@ public:
     EndAction endAction() const { return _endAction; }
     void setEndAction(EndAction action);
     double distanceToWaypoint() const { return _distToWp; }
+    float defaultAltitude() const { return _defaultAlt; }
+    void setDefaultAltitude(float alt) { if (_defaultAlt != alt) { _defaultAlt = alt; emit defaultsChanged(); } }
+    float defaultSpeed() const { return _defaultSpeed; }
+    void setDefaultSpeed(float spd) { if (_defaultSpeed != spd) { _defaultSpeed = spd; emit defaultsChanged(); } }
 
     const QVector<DDSWaypoint> &waypoints() const { return _waypoints; }
 
@@ -100,6 +106,7 @@ signals:
     void waypointReached(int index);
     void missionComplete();
     void missionError(const QString &message);
+    void defaultsChanged();
 
 private:
     void _setState(State s);
@@ -125,6 +132,8 @@ private:
     double _homeAlt     = 0.0;
     bool   _homeValid   = false;
     double _distToWp    = 0.0;
+    float  _defaultAlt   = 10.0f;
+    float  _defaultSpeed = -1.0f;
 
     QTimer _arrivalCheckTimer;
     QTimer _hoverTimer;

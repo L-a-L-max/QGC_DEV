@@ -132,8 +132,8 @@ void DDSMissionManager::startMission()
         emit missionError(QStringLiteral("No waypoints defined"));
         return;
     }
-    if (!_gotoPub || !_gotoPub->isReady()) {
-        emit missionError(QStringLiteral("Goto publisher not ready"));
+    if (!_cmdPub) {
+        emit missionError(QStringLiteral("Command publisher not ready"));
         return;
     }
     if (!_homeValid) {
@@ -290,18 +290,31 @@ void DDSMissionManager::_setState(State s)
 void DDSMissionManager::_sendCurrentWaypoint()
 {
     if (_state != Running || _currentIndex < 0 || _currentIndex >= _waypoints.size()) return;
-    if (!_gotoPub || !_gotoPub->isReady()) return;
+    if (!_cmdPub) return;
 
     const DDSWaypoint &wp = _waypoints[_currentIndex];
     const double wpAltAMSL = _homeAlt + static_cast<double>(wp.altitude);
 
+    const float speed = (wp.speed > 0.0f) ? wp.speed : -1.0f;
     const float headingRad = std::isnan(wp.heading)
                                ? NAN
                                : static_cast<float>(qDegreesToRadians(static_cast<double>(wp.heading)));
 
-    _gotoPub->sendGoto(wp.latitude, wp.longitude, wpAltAMSL,
-                       _homeLat, _homeLon, _homeAlt,
-                       wp.speed, -1.0f, headingRad, -1.0f);
+    // Use MAV_CMD_DO_REPOSITION (192) which is confirmed working via DDS command channel.
+    // param2 = 1 (MAV_DO_REPOSITION_FLAGS_CHANGE_MODE) forces PX4 to switch mode.
+    _cmdPub->sendCommand(
+        192,        // MAV_CMD_DO_REPOSITION
+        speed,      // param1: ground speed (-1 = default)
+        1.0f,       // param2: MAV_DO_REPOSITION_FLAGS_CHANGE_MODE
+        0.0f,       // param3: loiter radius
+        headingRad, // param4: heading (rad, NaN = current)
+        wp.latitude,  // param5: latitude
+        wp.longitude, // param6: longitude
+        static_cast<float>(wpAltAMSL));  // param7: altitude AMSL
+
+    qInfo() << "[DDSMission] Sending DO_REPOSITION to WP" << _currentIndex
+            << "lat=" << wp.latitude << "lon=" << wp.longitude
+            << "alt=" << wpAltAMSL << "spd=" << speed;
 }
 
 void DDSMissionManager::_checkArrival()

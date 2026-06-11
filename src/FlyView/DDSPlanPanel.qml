@@ -172,16 +172,22 @@ Rectangle {
             QGCTextField {
                 id:                 altField
                 Layout.fillWidth:   true
-                text:               "10"
+                text:               _missionMgr ? _missionMgr.defaultAltitude.toString() : "10"
                 inputMethodHints:   Qt.ImhFormattedNumbersOnly
+                onEditingFinished: {
+                    if (_missionMgr) _missionMgr.defaultAltitude = parseFloat(text) || 10.0
+                }
             }
 
             QGCLabel { text: qsTr("Speed (m/s):") }
             QGCTextField {
                 id:                 speedField
                 Layout.fillWidth:   true
-                text:               "-1"
+                text:               _missionMgr ? _missionMgr.defaultSpeed.toString() : "-1"
                 inputMethodHints:   Qt.ImhFormattedNumbersOnly
+                onEditingFinished: {
+                    if (_missionMgr) _missionMgr.defaultSpeed = parseFloat(text) || -1.0
+                }
             }
 
             QGCLabel { text: qsTr("End Action:") }
