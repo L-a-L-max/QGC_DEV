@@ -290,7 +290,7 @@ FlightMap {
         }
     }
 
-    property var _ddsMissionMgr: _activeVehicle ? _activeVehicle.ddsMissionManager() : null
+    property var _ddsMissionMgr: _activeVehicle ? _activeVehicle.ddsMissionMgr : null
     property int _ddsMissionWpCount: _ddsMissionMgr ? _ddsMissionMgr.waypointCount : 0
 
     Connections {
@@ -802,13 +802,13 @@ FlightMap {
                         text:               qsTr("Add DDS Waypoint")
                         visible: {
                             var v = QGroundControl.multiVehicleManager.activeVehicle
-                            return v ? v.ddsMissionManager() !== null : false
+                            return v ? v.ddsMissionMgr !== null : false
                         }
                         onClicked: {
                             mapClickDropPanel.close()
                             var v = QGroundControl.multiVehicleManager.activeVehicle
-                            if (v && v.ddsMissionManager()) {
-                                v.ddsMissionManager().addWaypoint(
+                            if (v && v.ddsMissionMgr) {
+                                v.ddsMissionMgr.addWaypoint(
                                     mapClickCoord.latitude, mapClickCoord.longitude,
                                     10.0, -1.0, NaN, 0.0)
                             }
@@ -826,7 +826,7 @@ FlightMap {
     }
 
     onMapClicked: (position) => {
-        var hasDDSMission = _activeVehicle && _activeVehicle.ddsMissionManager() !== null
+        var hasDDSMission = _activeVehicle && _activeVehicle.ddsMissionMgr !== null
         if (!globals.guidedControllerFlyView.guidedUIVisible &&
             (globals.guidedControllerFlyView.showGotoLocation || globals.guidedControllerFlyView.showOrbit ||
              globals.guidedControllerFlyView.showROI || globals.guidedControllerFlyView.showSetHome ||

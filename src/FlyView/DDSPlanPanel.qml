@@ -14,7 +14,7 @@ Rectangle {
     clip:   true
 
     property var _activeVehicle: QGroundControl.multiVehicleManager.activeVehicle
-    property var _missionMgr:   _activeVehicle ? _activeVehicle.ddsMissionManager() : null
+    property var _missionMgr:   _activeVehicle ? _activeVehicle.ddsMissionMgr : null
     property int _wpCount:      _missionMgr ? _missionMgr.waypointCount : 0
     property int _currentWp:    _missionMgr ? _missionMgr.currentWaypointIndex : -1
     property int _state:        _missionMgr ? _missionMgr.state : 0

@@ -585,13 +585,14 @@ public:
     RemoteIDManager*                remoteIDManager     () { return _remoteIDManager; }
 
 #ifdef QGC_ENABLE_DDS
-    /// Set the DDS command publisher for this vehicle (called by DDSVehicleManager).
+    Q_PROPERTY(DDSMissionManager* ddsMissionMgr READ ddsMissionManager NOTIFY ddsMissionManagerChanged)
+
     void setDDSCommandPublisher(DDSCommandPublisher *publisher) { _ddsCommandPublisher = publisher; }
     DDSCommandPublisher *ddsCommandPublisher() const { return _ddsCommandPublisher; }
     void setDDSManualControlPublisher(DDSManualControlPublisher *publisher) { _ddsManualControlPublisher = publisher; }
     DDSManualControlPublisher *ddsManualControlPublisher() const { return _ddsManualControlPublisher; }
-    void setDDSMissionManager(DDSMissionManager *mgr) { _ddsMissionManager = mgr; }
-    Q_INVOKABLE DDSMissionManager *ddsMissionManager() const { return _ddsMissionManager; }
+    void setDDSMissionManager(DDSMissionManager *mgr) { _ddsMissionManager = mgr; emit ddsMissionManagerChanged(); }
+    DDSMissionManager *ddsMissionManager() const { return _ddsMissionManager; }
 #endif
 
     static void showCommandAckError(const mavlink_command_ack_t& ack);
@@ -793,6 +794,7 @@ signals:
     void haveMRSpeedLimChanged          ();
     void haveFWSpeedLimChanged          ();
     void hasGripperChanged              ();
+    void ddsMissionManagerChanged       ();
 
     void firmwareVersionChanged         ();
     void firmwareCustomVersionChanged   ();
