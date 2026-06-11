@@ -2,6 +2,8 @@
 
 本文档描述如何在 Ubuntu 系统上交叉编译 QGC DDS_P3 分支的 Android APK，并在 Android 手机上进行测试。
 
+**前提**：你已在虚拟机上安装好 Qt 6.10.3 PC 版本。
+
 ---
 
 ## 目录
@@ -18,31 +20,101 @@
 
 ## 1. 环境要求
 
-| 组件 | 版本要求 | 说明 |
-|------|---------|------|
+| 组件 | 版本 | 说明 |
+|------|------|------|
 | Ubuntu | 22.04+ | 编译主机 |
-| Qt | 6.8.x（Desktop + Android arm64_v8a） | 需要 Host 和 Target 两份 |
-| Android SDK | Platform 34+ | Command-line tools |
-| Android NDK | r27c (27.2.12479018) | 与 Qt 6.8 兼容 |
+| Qt (PC/Host) | **6.10.3** ✅ 已安装 | 提供 moc/rcc/qmlcachegen 等编译工具 |
+| Qt (Android Target) | **6.10.3 android_arm64_v8a** | ⚠️ 需额外安装 |
+| Android SDK | Platform 35 | Command-line tools |
+| Android NDK | r27c (27.2.12479018) | Qt 6.10 推荐版本 |
 | Java JDK | 17 | Gradle 编译需要 |
 | CMake | 3.25+ | 构建系统 |
 | Ninja | 1.10+ | 构建后端 |
 | CycloneDDS | 0.10.x | 需要交叉编译 Android ARM64 版本 |
-| Python | 3.10+ | aqtinstall 安装 Qt |
 
 ### 磁盘空间
 
-- Qt Desktop + Android: ~6 GB
+- Qt Android Target: ~3 GB（PC 版已有，无需重复）
 - Android SDK + NDK: ~8 GB
 - CycloneDDS 编译: ~200 MB
 - QGC 编译: ~2 GB
-- **总计建议预留: ≥20 GB**
+- **总计额外需求: ≥15 GB**
 
 ---
 
 ## 2. 工具安装
 
-### 2.1 基础工具
+### 2.1 确认已有的 Qt 安装路径
+
+首先确认你的 Qt 6.10.3 PC 版安装路径：
+
+```bash
+# 通常是以下路径之一，请确认实际位置
+ls ~/Qt/6.10.3/gcc_64/bin/qmake
+# 或
+ls /opt/Qt/6.10.3/gcc_64/bin/qmake
+```
+
+记录下这个路径，后续用作 `QT_HOST_PATH`：
+
+```bash
+# 根据你的实际安装路径设置（以下二选一，选你实际的路径）
+export QT_HOST_PATH=$HOME/Qt/6.10.3/gcc_64
+# 或
+# export QT_HOST_PATH=/opt/Qt/6.10.3/gcc_64
+```
+
+### 2.2 安装 Qt 6.10.3 Android Target
+
+你需要额外安装 Android ARM64 target 组件。有两种方式：
+
+**方式一：通过 Qt Maintenance Tool（推荐，如果你用 Qt Installer 安装的）**
+
+```bash
+# 打开 Qt 维护工具
+~/Qt/MaintenanceTool
+
+# 选择 "Add or remove components"
+# 勾选: Qt 6.10.3 → Android → Android ARM64-v8a
+# 同时勾选以下模块（如果没有的话）：
+#   - Qt Location
+#   - Qt Positioning
+#   - Qt Multimedia
+#   - Qt Serial Port
+#   - Qt WebSockets
+#   - Qt HTTP Server
+#   - Qt Connectivity
+#   - Qt Sensors
+#   - Qt Image Formats
+#   - Qt Shader Tools
+#   - Qt Quick 3D
+```
+
+**方式二：通过 aqtinstall（命令行，无需 Qt 账号）**
+
+```bash
+pip3 install aqtinstall
+
+# 查看可用版本
+aqt list-qt linux android --archives 6.10.3
+
+# 下载 Android ARM64 target
+# 注意: -O 指定安装到你已有的 Qt 目录，这样可以和 PC 版共存
+aqt install-qt linux android 6.10.3 android_arm64_v8a \
+    -m qtlocation qtpositioning qtspeech qtmultimedia qtserialport \
+      qtimageformats qtshadertools qtconnectivity qtquick3d qtsensors \
+      qtwebsockets qthttpserver \
+    -O $HOME/Qt
+```
+
+安装完成后确认：
+
+```bash
+ls ~/Qt/6.10.3/android_arm64_v8a/lib/cmake/Qt6/qt.toolchain.cmake
+# 应该存在此文件
+```
+
+### 2.3 基础编译工具
 
 ```bash
 sudo apt update
@@ -51,51 +123,13 @@ sudo apt install -y build-essential cmake ninja-build git curl unzip \
     libgl1-mesa-dev libxkbcommon-dev libvulkan-dev
 ```
 
-### 2.2 设置 JAVA_HOME
+### 2.4 设置 JAVA_HOME
 
 ```bash
 export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-echo 'export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64' >> ~/.bashrc
 ```
 
-### 2.3 安装 aqtinstall（用于下载 Qt）
-
-```bash
-pip3 install aqtinstall
-```
-
-### 2.4 下载 Qt 6.8（Desktop Host + Android Target）
-
-```bash
-# 设定安装目录
-export QT_INSTALL_DIR=$HOME/Qt
-
-# 下载 Qt Desktop (Host tools，编译 QML 等需要)
-aqt install-qt linux desktop 6.8.0 linux_gcc_64 \
-    -m qtlocation qtpositioning qtspeech qtmultimedia qtserialport \
-      qtimageformats qtshadertools qtconnectivity qtquick3d qtsensors \
-      qtwebsockets qthttpserver \
-    -O $QT_INSTALL_DIR
-
-# 下载 Qt Android ARM64 (Target)
-aqt install-qt linux android 6.8.0 android_arm64_v8a \
-    -m qtlocation qtpositioning qtspeech qtmultimedia qtserialport \
-      qtimageformats qtshadertools qtconnectivity qtquick3d qtsensors \
-      qtwebsockets qthttpserver \
-    -O $QT_INSTALL_DIR
-```
-
-> **注意**：如果 6.8.0 不可用，请用 `aqt list-qt linux desktop` 和 `aqt list-qt linux android` 查看可用版本，选择 6.8.x 中最新的版本。
-
-### 2.5 设置 Qt 环境变量
-
-```bash
-export QT_HOST_PATH=$QT_INSTALL_DIR/6.8.0/gcc_64
-export QT_ROOT_DIR=$QT_INSTALL_DIR/6.8.0/android_arm64_v8a
-export PATH=$QT_HOST_PATH/bin:$PATH
-```
-
-### 2.6 安装 Android SDK 和 NDK
+### 2.5 安装 Android SDK 和 NDK
 
 ```bash
 # 创建 Android SDK 目录
@@ -105,8 +139,8 @@ mkdir -p $ANDROID_HOME
 # 下载 command-line tools
 cd /tmp
 wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-unzip commandlinetools-linux-*_latest.zip -d $ANDROID_HOME/cmdline-tools
-mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest
+unzip -o commandlinetools-linux-*_latest.zip -d $ANDROID_HOME/cmdline-tools
+mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest 2>/dev/null || true
 
 # 添加到 PATH
 export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
@@ -116,38 +150,55 @@ yes | sdkmanager --licenses
 
 # 安装必要组件
 sdkmanager "platform-tools" \
-           "platforms;android-34" \
+           "platforms;android-35" \
            "build-tools;35.0.0" \
            "ndk;27.2.12479018"
 
 # 设置 NDK 路径
 export ANDROID_NDK=$ANDROID_HOME/ndk/27.2.12479018
-export ANDROID_PLATFORM=android-34
+export ANDROID_PLATFORM=android-35
 ```
 
-### 2.7 保存环境变量
+### 2.6 保存所有环境变量
 
-将以下内容添加到 `~/.bashrc`（或 `~/.profile`）：
+将以下内容添加到 `~/.bashrc`：
 
 ```bash
 cat >> ~/.bashrc << 'EOF'
-# Android Development
-export ANDROID_HOME=$HOME/Android/Sdk
-export ANDROID_NDK=$ANDROID_HOME/ndk/27.2.12479018
-export ANDROID_PLATFORM=android-34
-export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
-
-# Qt
-export QT_INSTALL_DIR=$HOME/Qt
-export QT_HOST_PATH=$QT_INSTALL_DIR/6.8.0/gcc_64
-export QT_ROOT_DIR=$QT_INSTALL_DIR/6.8.0/android_arm64_v8a
-export PATH=$QT_HOST_PATH/bin:$PATH
+# === QGC Android Build Environment ===
 
 # Java
 export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+
+# Android SDK/NDK
+export ANDROID_HOME=$HOME/Android/Sdk
+export ANDROID_NDK=$ANDROID_HOME/ndk/27.2.12479018
+export ANDROID_PLATFORM=android-35
+export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
+
+# Qt 6.10.3 (修改为你的实际 Qt 安装路径)
+export QT_HOST_PATH=$HOME/Qt/6.10.3/gcc_64
+export QT_ROOT_DIR=$HOME/Qt/6.10.3/android_arm64_v8a
+export PATH=$QT_HOST_PATH/bin:$PATH
 EOF
 
 source ~/.bashrc
+```
+
+### 2.7 验证环境
+
+```bash
+echo "Java: $(java -version 2>&1 | head -1)"
+echo "CMake: $(cmake --version | head -1)"
+echo "Ninja: $(ninja --version)"
+echo "NDK: $ANDROID_NDK"
+echo "Qt Host: $QT_HOST_PATH"
+echo "Qt Target: $QT_ROOT_DIR"
+
+# 验证关键文件存在
+test -f $QT_HOST_PATH/bin/qmake && echo "✓ Qt Host OK" || echo "✗ Qt Host NOT FOUND"
+test -f $QT_ROOT_DIR/lib/cmake/Qt6/qt.toolchain.cmake && echo "✓ Qt Android OK" || echo "✗ Qt Android NOT FOUND"
+test -d $ANDROID_NDK && echo "✓ NDK OK" || echo "✗ NDK NOT FOUND"
 ```
 
 ---
@@ -165,34 +216,11 @@ cd cyclonedds
 git checkout 0.10.5  # 使用稳定版本
 ```
 
-### 3.2 创建 Android 交叉编译工具链文件
-
-```bash
-cat > $HOME/cyclonedds/android-arm64.cmake << 'EOF'
-# Android ARM64 cross-compilation toolchain for CycloneDDS
-set(CMAKE_SYSTEM_NAME Android)
-set(CMAKE_SYSTEM_VERSION 34)
-set(CMAKE_ANDROID_ARCH_ABI arm64-v8a)
-set(CMAKE_ANDROID_NDK $ENV{ANDROID_NDK})
-set(CMAKE_ANDROID_STL_TYPE c++_shared)
-
-# Disable features not needed on Android
-set(BUILD_SHARED_LIBS ON)
-set(BUILD_IDLC OFF)
-set(BUILD_DDSPERF OFF)
-set(BUILD_EXAMPLES OFF)
-set(BUILD_TESTING OFF)
-set(ENABLE_SSL OFF)
-set(ENABLE_SECURITY OFF)
-set(ENABLE_SHM OFF)
-EOF
-```
-
-### 3.3 编译 CycloneDDS
+### 3.2 编译 CycloneDDS for Android
 
 ```bash
 cd $HOME/cyclonedds
-mkdir build-android && cd build-android
+mkdir -p build-android && cd build-android
 
 cmake .. \
     -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake \
@@ -214,15 +242,14 @@ ninja -j$(nproc)
 ninja install
 ```
 
-### 3.4 验证编译结果
+### 3.3 验证编译结果
 
 ```bash
-# 应该看到 ARM64 的共享库
 file $HOME/cyclonedds-android/lib/libddsc.so
-# 输出应包含: ELF 64-bit LSB shared object, ARM aarch64
+# 预期输出: ELF 64-bit LSB shared object, ARM aarch64
 
-ls $HOME/cyclonedds-android/include/dds/
-# 应包含 dds.h 等头文件
+ls $HOME/cyclonedds-android/include/dds/dds.h
+# 应该存在
 ```
 
 ---
@@ -243,7 +270,7 @@ git submodule update --init --recursive
 
 ```bash
 cd $HOME/qgc-android
-mkdir build-android && cd build-android
+mkdir -p build-android && cd build-android
 
 cmake .. \
     -DCMAKE_TOOLCHAIN_FILE=$QT_ROOT_DIR/lib/cmake/Qt6/qt.toolchain.cmake \
@@ -261,11 +288,14 @@ cmake .. \
     -G Ninja
 ```
 
-> **关键参数说明**：
-> - `CMAKE_TOOLCHAIN_FILE`: 使用 Qt 提供的 Android 工具链（内部会调用 NDK 工具链）
-> - `QT_HOST_PATH`: Host Qt 路径，编译 QML/MOC 等生成工具需要
-> - `QGC_ENABLE_DDS=ON`: 启用 DDS 功能
-> - `CycloneDDS_*`: 指向交叉编译好的 CycloneDDS
+**参数说明**：
+
+| 参数 | 值 | 说明 |
+|------|-----|------|
+| `CMAKE_TOOLCHAIN_FILE` | Qt 提供的 toolchain | 自动配置 NDK 交叉编译 |
+| `QT_HOST_PATH` | 你已安装的 PC 版 Qt 6.10.3 | 提供编译工具（moc, rcc 等）|
+| `QGC_ENABLE_DDS=ON` | 启用 DDS | 编译 CycloneDDS 相关代码 |
+| `CycloneDDS_*` | 第 3 步编译的路径 | 交叉编译好的 Android 版 |
 
 ### 4.3 编译
 
@@ -273,54 +303,27 @@ cmake .. \
 cmake --build . --parallel $(nproc)
 ```
 
-编译时间预计 15-30 分钟（取决于 CPU 核心数和内存）。
-
-### 4.4 如果编译报错
-
-**常见问题 1：找不到 CycloneDDS**
-
-确认 `FindCycloneDDS.cmake` 中的搜索路径包含 `$HOME/cyclonedds-android`：
-
-```bash
-# 在 cmake 配置时额外添加：
--DCMAKE_PREFIX_PATH="$QT_ROOT_DIR;$HOME/cyclonedds-android"
-```
-
-**常见问题 2：Qt QML 模块找不到**
-
-确认 Host Qt 和 Target Qt 版本完全一致（都是 6.8.0）。
-
-**常见问题 3：Gradle 相关错误**
-
-```bash
-# 确认 JAVA_HOME 正确
-echo $JAVA_HOME
-java -version  # 应该显示 openjdk 17
-```
+编译时间预计 15-30 分钟。
 
 ---
 
 ## 5. 生成 APK
 
-### 5.1 生成 Debug APK（无需签名）
-
-编译成功后，APK 会在以下位置生成：
+### 5.1 编译成功后查找 APK
 
 ```bash
-ls build-android/android-build/*.apk
-# 或
-ls build-android/android-build/build/outputs/apk/debug/*.apk
+find build-android -name "*.apk" -type f
+# 通常在: build-android/android-build/QGroundControl.apk
+# 或: build-android/android-build/build/outputs/apk/debug/android-build-debug.apk
 ```
 
-### 5.2 如果自动打包没触发
+### 5.2 如果没有自动生成 APK
 
-手动触发 androiddeployqt：
+需要手动触发 androiddeployqt：
 
 ```bash
-cd build-android
+cd $HOME/qgc-android/build-android
 
-# androiddeployqt 由 Qt 的 CMake 集成自动调用
-# 如果需要手动执行：
 $QT_HOST_PATH/bin/androiddeployqt \
     --input android-QGroundControl-deployment-settings.json \
     --output android-build \
@@ -328,9 +331,12 @@ $QT_HOST_PATH/bin/androiddeployqt \
     --gradle
 ```
 
-### 5.3 创建 Debug 签名（如果需要）
+### 5.3 使用 Debug 签名（适用于本地测试）
+
+如果编译时提示需要签名：
 
 ```bash
+# 生成 debug keystore
 keytool -genkey -v \
     -keystore $HOME/debug.keystore \
     -storepass android \
@@ -339,14 +345,26 @@ keytool -genkey -v \
     -keyalg RSA -keysize 2048 -validity 10000 \
     -dname "CN=Android Debug,O=Android,C=US"
 
-# 重新配置 cmake 添加签名参数：
+# 重新 cmake 配置添加签名
+cd $HOME/qgc-android/build-android
 cmake .. \
-    ... (其他参数不变) \
+    -DCMAKE_TOOLCHAIN_FILE=$QT_ROOT_DIR/lib/cmake/Qt6/qt.toolchain.cmake \
+    -DCMAKE_PREFIX_PATH=$QT_ROOT_DIR \
+    -DQT_HOST_PATH=$QT_HOST_PATH \
+    -DANDROID_ABI=arm64-v8a \
+    -DANDROID_PLATFORM=$ANDROID_PLATFORM \
+    -DANDROID_NDK=$ANDROID_NDK \
+    -DQT_ANDROID_ABIS=arm64-v8a \
+    -DQGC_ENABLE_DDS=ON \
+    -DCycloneDDS_INCLUDE_DIR=$HOME/cyclonedds-android/include \
+    -DCycloneDDS_LIBRARY=$HOME/cyclonedds-android/lib/libddsc.so \
+    -DCMAKE_BUILD_TYPE=Release \
     -DQT_ANDROID_SIGN_APK=ON \
     -DQT_ANDROID_KEYSTORE_PATH=$HOME/debug.keystore \
     -DQT_ANDROID_KEYSTORE_ALIAS=androiddebugkey \
     -DQT_ANDROID_KEYSTORE_STORE_PASS=android \
-    -DQT_ANDROID_KEYSTORE_KEY_PASS=android
+    -DQT_ANDROID_KEYSTORE_KEY_PASS=android \
+    -G Ninja
 
 cmake --build . --parallel $(nproc)
 ```
@@ -360,212 +378,262 @@ cmake --build . --parallel $(nproc)
 | 条件 | 要求 |
 |------|------|
 | Android 版本 | 9.0 (API 28) 及以上 |
-| CPU 架构 | ARM64 (arm64-v8a) |
+| CPU 架构 | ARM64 (arm64-v8a)，市面上绝大多数手机都是 |
 | 网络 | 手机与 PX4 电脑在**同一 WiFi 网段** |
 | USB 调试 | 开启（设置 → 开发者选项 → USB 调试）|
 
 ### 6.2 安装 APK
 
-**方法一：ADB 安装**
+**方法一：ADB 安装（USB 连接）**
 
 ```bash
-# 连接手机到 Ubuntu（USB 线）
-adb devices       # 确认设备已连接
+# 确认手机已连接
+adb devices
+
+# 安装 APK
 adb install -r build-android/android-build/QGroundControl.apk
 ```
 
-**方法二：文件传输安装**
+**方法二：文件传输**
 
-1. 将 APK 文件复制到手机存储
-2. 手机上通过文件管理器找到 APK 并安装
+1. 将 APK 文件发送到手机（微信/QQ/USB 复制）
+2. 手机上用文件管理器打开 APK 安装
 3. 需要允许"安装未知来源应用"
 
-### 6.3 网络配置
+### 6.3 网络环境配置
 
-DDS 使用 UDP 多播进行服务发现，需要确保：
+DDS 使用 UDP 多播进行服务发现：
 
-1. **手机和 PX4 电脑连接同一 WiFi 路由器**
-2. **路由器允许 UDP 多播**（家用路由器通常允许）
-3. **防火墙不阻止 UDP 端口 7400-7500**
+```
+┌─────────────────┐         WiFi          ┌─────────────────┐
+│  Ubuntu 电脑     │◄──────────────────────►│  Android 手机    │
+│                 │    同一局域网           │                 │
+│  ┌───────────┐  │                        │  ┌───────────┐  │
+│  │ PX4 SITL  │  │                        │  │ QGC DDS   │  │
+│  │ (gz_x500) │  │                        │  │ (APK)     │  │
+│  └─────┬─────┘  │                        │  └─────┬─────┘  │
+│        │ UDP    │                        │        │        │
+│  ┌─────▼─────┐  │                        │        │ DDS    │
+│  │ DDS Agent │  │     UDP Multicast      │        │ (UDP)  │
+│  │ (XRCE)   │◄─┼────────────────────────┼────────┘        │
+│  └───────────┘  │    端口 7400-7500      │                 │
+└─────────────────┘                        └─────────────────┘
+```
 
-如果多播不可用，可以在 QGC 中配置 DDS 对端 IP（单播模式）。
+**关键检查**：
+1. 手机和电脑连接**同一 WiFi**
+2. 路由器允许 UDP 多播（家用路由器通常允许）
+3. 电脑防火墙开放 UDP 7400-7500：
+   ```bash
+   sudo ufw allow 7400:7500/udp
+   ```
 
-### 6.4 PX4 SITL 测试环境搭建
-
-在 Ubuntu 电脑上启动 PX4 + DDS Agent：
+### 6.4 启动 PX4 测试环境
 
 ```bash
-# 终端 1: 启动 PX4 SITL
+# 终端 1: PX4 SITL
 cd ~/PX4-Autopilot
 make px4_sitl gz_x500
 
-# 终端 2: 启动 Micro-XRCE-DDS Agent
+# 终端 2: DDS Agent
 MicroXRCEAgent udp4 -p 8888
 ```
 
-### 6.5 测试流程
+### 6.5 测试用例
 
-#### 测试一：DDS 连接
+#### TC-01: DDS 连接
 
-1. 确保 PX4 + DDS Agent 已启动
-2. 手机打开 QGC DDS
-3. **预期**：QGC 显示连接状态，能看到遥测数据（GPS 坐标、姿态、电池等）
-4. **验证**：飞行仪表盘上显示 PX4 状态
+| 步骤 | 操作 | 预期 |
+|------|------|------|
+| 1 | 确保 PX4 + Agent 运行 | Agent 显示 client connected |
+| 2 | 手机打开 QGC | 启动成功 |
+| 3 | 等待几秒 | QGC 显示遥测数据（GPS/姿态/电池）|
 
-#### 测试二：基本命令（Arm/Disarm/起飞/降落）
+#### TC-02: Arm / Disarm
 
-1. 确认 QGC 已连接 PX4
-2. 点击 "Arm" → PX4 解锁
-3. 点击 "Takeoff" → 无人机起飞
-4. 等待稳定后点击 "Land" → 降落
-5. **预期**：每个命令 PX4 终端有响应日志，仿真无人机执行动作
+| 步骤 | 操作 | 预期 |
+|------|------|------|
+| 1 | QGC 点击 Arm | PX4 终端显示 Armed |
+| 2 | QGC 点击 Disarm | PX4 终端显示 Disarmed |
 
-#### 测试三：飞行模式切换
+#### TC-03: 起飞 / 降落
 
-1. 无人机起飞后
-2. 切换到不同飞行模式（Position / Hold / Return）
-3. **预期**：PX4 终端显示模式切换成功
+| 步骤 | 操作 | 预期 |
+|------|------|------|
+| 1 | 点击 Takeoff | 仿真无人机升空到默认高度 |
+| 2 | 等待稳定（~10s） | 无人机悬停 |
+| 3 | 点击 Land | 无人机降落 |
 
-#### 测试四：Go To（指点飞行）
+#### TC-04: 飞行模式切换
 
-1. 无人机起飞并稳定
-2. 在地图上点击一个位置 → 选择 "Go to here"
-3. **预期**：无人机飞往目标位置
+| 步骤 | 操作 | 预期 |
+|------|------|------|
+| 1 | 起飞后点击模式 | 显示可用模式列表 |
+| 2 | 切到 Position | PX4 显示模式切换 |
+| 3 | 切到 Hold | 无人机原地悬停 |
 
-#### 测试五：虚拟摇杆控制
+#### TC-05: Go To 指点飞行
 
-1. 无人机起飞后
-2. 在 PX4 终端执行 `commander mode posctl` 切到 Position 模式
-3. 触摸虚拟摇杆进行操控
-4. **预期**：无人机响应摇杆输入，按方向移动
+| 步骤 | 操作 | 预期 |
+|------|------|------|
+| 1 | 起飞并稳定 | 悬停中 |
+| 2 | 点击地图某位置 → "Go to here" | 无人机飞往该位置 |
+| 3 | 观察到达后 | 无人机在目标位置悬停 |
 
-#### 测试六：RTL（返航）
+#### TC-06: 虚拟摇杆
 
-1. 无人机飞行到一定距离
-2. 点击 "Return" 按钮
-3. **预期**：无人机自动返回起飞点并降落
+| 步骤 | 操作 | 预期 |
+|------|------|------|
+| 1 | 起飞后，PX4 终端：`commander mode posctl` | 切到 Position 模式 |
+| 2 | 触摸拖动虚拟摇杆 | 无人机按方向移动 |
+| 3 | 松开摇杆 | 无人机悬停 |
+
+#### TC-07: RTL 返航
+
+| 步骤 | 操作 | 预期 |
+|------|------|------|
+| 1 | 飞行到离起飞点一段距离 | — |
+| 2 | 点击 Return | 无人机自动返回起飞点 |
+| 3 | 等待 | 自动降落 |
 
 ### 6.6 测试记录表
 
 | 测试项 | 结果 | 备注 |
 |--------|------|------|
-| DDS 连接 | ⬜ Pass / ⬜ Fail | |
-| Arm/Disarm | ⬜ Pass / ⬜ Fail | |
-| 起飞/降落 | ⬜ Pass / ⬜ Fail | |
-| 模式切换 | ⬜ Pass / ⬜ Fail | |
-| Go To 指点 | ⬜ Pass / ⬜ Fail | |
-| 虚拟摇杆 | ⬜ Pass / ⬜ Fail | |
-| RTL 返航 | ⬜ Pass / ⬜ Fail | |
+| TC-01 DDS 连接 | ⬜ Pass / ⬜ Fail | |
+| TC-02 Arm/Disarm | ⬜ Pass / ⬜ Fail | |
+| TC-03 起飞/降落 | ⬜ Pass / ⬜ Fail | |
+| TC-04 模式切换 | ⬜ Pass / ⬜ Fail | |
+| TC-05 Go To 指点 | ⬜ Pass / ⬜ Fail | |
+| TC-06 虚拟摇杆 | ⬜ Pass / ⬜ Fail | |
+| TC-07 RTL 返航 | ⬜ Pass / ⬜ Fail | |
 
 ---
 
 ## 7. 常见问题排查
 
-### 7.1 QGC 无法发现 PX4
+### 7.1 CMake 配置失败: "Qt6 not found"
 
-**现象**：QGC 启动后无遥测数据
+```
+确认 QT_ROOT_DIR 指向 android_arm64_v8a 目录:
+ls $QT_ROOT_DIR/lib/cmake/Qt6/Qt6Config.cmake
+```
+
+如果文件不存在，说明 Android target 没有安装成功，重新执行 2.2 节。
+
+### 7.2 编译报错: "CycloneDDS not found"
+
+```bash
+# 确认交叉编译的 CycloneDDS 存在
+ls $HOME/cyclonedds-android/lib/libddsc.so
+ls $HOME/cyclonedds-android/include/dds/dds.h
+
+# 如果不存在，重新执行第 3 节
+```
+
+### 7.3 QGC 启动后无法发现 PX4
 
 **排查步骤**：
 ```bash
 # 1. 确认 DDS Agent 在运行
 ps aux | grep MicroXRCEAgent
 
-# 2. 确认手机和电脑在同一网段
-# 电脑端查看 IP
-ip addr show wlan0  # 或 eth0
+# 2. 确认同一网段
+ip addr show  # 电脑 IP
+# 手机: 设置 → WLAN → 查看 IP
 
-# 手机端查看 IP
-# 设置 → 关于手机 → 状态 → IP 地址
-
-# 3. 测试 UDP 连通性（在电脑上）
-# 发送测试 UDP 包
-echo "test" | nc -u <手机IP> 7400
-
-# 4. 确认防火墙未阻止
-sudo ufw status
+# 3. 开放防火墙
 sudo ufw allow 7400:7500/udp
+
+# 4. 测试网络连通
+ping <手机IP>  # 从电脑 ping 手机
 ```
 
-**解决方案**：
-- 确保同一网段 + 路由器允许多播
-- 如果不行，在 QGC DDS 配置中设置对端 IP 为电脑 IP（单播模式）
-
-### 7.2 QGC 闪退
-
-**排查方法**：
-```bash
-# 通过 adb 查看 logcat
-adb logcat | grep -i "qground\|crash\|fatal\|dds"
-```
-
-**常见原因**：
-- OpenGL ES 不兼容：尝试在 QGC 设置中切换渲染后端
-- 库缺失：确认 libddsc.so 已打包到 APK 中
-
-### 7.3 虚拟摇杆无响应
-
-**排查步骤**：
-1. 确认已切到 Position 模式（PX4 终端：`commander mode posctl`）
-2. 确认 DDS 数据在发送（看 QGC 日志或 PX4 终端 `listener manual_control_input`）
-3. 确认 PX4 参数 `COM_RC_IN_MODE` 不是 4 (Disabled)
-
-### 7.4 编译时找不到头文件
+### 7.4 QGC 闪退
 
 ```bash
-# 确认环境变量已加载
-echo $ANDROID_NDK
-echo $QT_HOST_PATH
-echo $QT_ROOT_DIR
-
-# 如果为空，重新 source
-source ~/.bashrc
+# 查看 Android 系统日志
+adb logcat | grep -iE "qground|crash|fatal|dds|signal"
 ```
 
-### 7.5 APK 安装失败
+常见原因：
+- OpenGL ES 兼容性问题 → 重新编译为 Debug 版检查日志
+- CycloneDDS 库没有打包到 APK → 检查 APK 内容：
+  ```bash
+  unzip -l QGroundControl.apk | grep libddsc
+  ```
 
-```
-INSTALL_FAILED_NO_MATCHING_ABIS
-```
-→ 手机 CPU 不是 ARM64，需要编译 armeabi-v7a 版本（修改 `-DANDROID_ABI=armeabi-v7a`）
+### 7.5 虚拟摇杆无响应
 
+1. 确认已切到 Position 模式
+2. PX4 终端验证：`listener manual_control_input`
+3. 检查参数：`param show COM_RC_IN_MODE`（不应为 4）
+
+### 7.6 APK 安装失败
+
+| 错误 | 解决 |
+|------|------|
+| `INSTALL_FAILED_NO_MATCHING_ABIS` | 手机不是 ARM64，需编译 armeabi-v7a |
+| `INSTALL_FAILED_UPDATE_INCOMPATIBLE` | 先卸载: `adb uninstall org.mavlink.qgroundcontrol` |
+| `INSTALL_FAILED_OLDER_SDK` | 手机 Android 版本过低（需≥9.0） |
+
+### 7.7 Gradle 编译错误
+
+```bash
+# 确认 Java 版本
+java -version  # 需要 openjdk 17
+
+# 如果是 Java 版本不对
+sudo update-alternatives --config java  # 选择 Java 17
 ```
-INSTALL_FAILED_UPDATE_INCOMPATIBLE
-```
-→ 先卸载旧版本：`adb uninstall org.mavlink.qgroundcontrol`
 
 ---
 
 ## 附录 A：一键编译脚本
 
-将以下脚本保存为 `build_android.sh`：
+保存为 `build_android.sh` 并执行：
 
 ```bash
 #!/bin/bash
 set -e
 
-# ============ 配置区 ============
-QT_VERSION="6.8.0"
-QT_INSTALL_DIR=$HOME/Qt
+# ============ 配置区（根据实际路径修改）============
+QT_HOST_PATH=$HOME/Qt/6.10.3/gcc_64
+QT_ROOT_DIR=$HOME/Qt/6.10.3/android_arm64_v8a
 ANDROID_HOME=$HOME/Android/Sdk
 ANDROID_NDK=$ANDROID_HOME/ndk/27.2.12479018
-ANDROID_PLATFORM=android-34
+ANDROID_PLATFORM=android-35
 CYCLONEDDS_ANDROID=$HOME/cyclonedds-android
 QGC_SOURCE=$HOME/qgc-android
-# ================================
+# ==================================================
 
-export QT_HOST_PATH=$QT_INSTALL_DIR/$QT_VERSION/gcc_64
-export QT_ROOT_DIR=$QT_INSTALL_DIR/$QT_VERSION/android_arm64_v8a
 export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 export PATH=$QT_HOST_PATH/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
 
-echo "=== QGC Android Build ==="
-echo "Qt Host: $QT_HOST_PATH"
-echo "Qt Target: $QT_ROOT_DIR"
-echo "NDK: $ANDROID_NDK"
+echo "========================================="
+echo " QGC DDS Android Build (Qt 6.10.3)"
+echo "========================================="
+echo "Qt Host:    $QT_HOST_PATH"
+echo "Qt Target:  $QT_ROOT_DIR"
+echo "NDK:        $ANDROID_NDK"
 echo "CycloneDDS: $CYCLONEDDS_ANDROID"
+echo "Source:     $QGC_SOURCE"
 echo ""
 
-cd $QGC_SOURCE
+# 验证环境
+for f in "$QT_HOST_PATH/bin/qmake" \
+         "$QT_ROOT_DIR/lib/cmake/Qt6/qt.toolchain.cmake" \
+         "$ANDROID_NDK/build/cmake/android.toolchain.cmake" \
+         "$CYCLONEDDS_ANDROID/lib/libddsc.so"; do
+    if [ ! -f "$f" ]; then
+        echo "ERROR: Missing file: $f"
+        exit 1
+    fi
+done
+echo "✓ Environment verified"
+echo ""
+
+cd "$QGC_SOURCE"
 mkdir -p build-android && cd build-android
 
 echo ">>> Configuring..."
@@ -584,59 +652,46 @@ cmake .. \
     -DQT_ANDROID_SIGN_APK=OFF \
     -G Ninja
 
-echo ">>> Building..."
+echo ""
+echo ">>> Building ($(nproc) threads)..."
 cmake --build . --parallel $(nproc)
 
 echo ""
-echo "=== Build Complete ==="
+echo "========================================="
+echo " Build Complete!"
+echo "========================================="
 echo "APK location:"
 find . -name "*.apk" -type f
+echo ""
+echo "Install: adb install -r <apk_path>"
+```
+
+使用方法：
+
+```bash
+chmod +x build_android.sh
+./build_android.sh
 ```
 
 ---
 
-## 附录 B：实机测试网络拓扑
-
-```
-┌─────────────────┐         WiFi          ┌─────────────────┐
-│  Ubuntu 电脑     │◄──────────────────────►│  Android 手机    │
-│                 │    同一局域网           │                 │
-│  ┌───────────┐  │                        │  ┌───────────┐  │
-│  │ PX4 SITL  │  │                        │  │ QGC DDS   │  │
-│  │ (gz_x500) │  │                        │  │ (APK)     │  │
-│  └─────┬─────┘  │                        │  └─────┬─────┘  │
-│        │ UDP    │                        │        │        │
-│  ┌─────▼─────┐  │                        │        │ DDS    │
-│  │ DDS Agent │  │     UDP Multicast      │        │ (UDP)  │
-│  │ (XRCE)   │◄─┼────────────────────────┼────────┘        │
-│  └───────────┘  │    端口 7400-7500      │                 │
-└─────────────────┘                        └─────────────────┘
-```
-
-### 网络流向
-
-1. PX4 SITL ↔ DDS Agent：UDP 8888（本机）
-2. DDS Agent ↔ QGC Android：UDP 多播 239.255.0.1:7400（发现）+ 动态 UDP 端口（数据）
-
----
-
-## 附录 C：与实际无人机测试
+## 附录 B：与实际无人机测试
 
 如果用真实 PX4 飞控（而非 SITL）：
 
 1. 飞控通过 WiFi/以太网连接到路由器
 2. 飞控上运行 Micro-XRCE-DDS Client（PX4 固件自带）
-3. 路由器上或另一台设备运行 DDS Agent
+3. 路由器上或地面站电脑运行 DDS Agent
 4. 手机连同一 WiFi
 
-```bash
-# 在路由器/网关设备上运行 Agent
-MicroXRCEAgent udp4 -p 8888
-```
-
-飞控 PX4 参数：
+**飞控 PX4 参数**：
 ```
 UXRCE_DDS_CFG = 0 (UDP)
 UXRCE_DDS_AG_IP = <Agent设备IP>
 UXRCE_DDS_PRT = 8888
+```
+
+**Agent 启动**：
+```bash
+MicroXRCEAgent udp4 -p 8888
 ```
