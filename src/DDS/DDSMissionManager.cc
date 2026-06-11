@@ -157,6 +157,22 @@ void DDSMissionManager::pauseMission()
     _arrivalCheckTimer.stop();
     _resendTimer.stop();
     _hoverTimer.stop();
+
+    // Send DO_REPOSITION to current vehicle position to stop immediately
+    if (_cmdPub && _vehicleLat != 0.0) {
+        _cmdPub->sendCommand(
+            192,        // MAV_CMD_DO_REPOSITION
+            -1.0f,      // param1: speed (default)
+            1.0f,       // param2: MAV_DO_REPOSITION_FLAGS_CHANGE_MODE
+            0.0f,       // param3: loiter radius
+            NAN,        // param4: heading (keep current)
+            _vehicleLat,  // param5: current lat
+            _vehicleLon,  // param6: current lon
+            static_cast<float>(_vehicleAlt));  // param7: current alt AMSL
+        qInfo() << "[DDSMission] Pause: hold at current position"
+                << "lat=" << _vehicleLat << "lon=" << _vehicleLon << "alt=" << _vehicleAlt;
+    }
+
     _setState(Paused);
     qInfo() << "[DDSMission] Mission paused at WP" << _currentIndex;
 }
@@ -177,6 +193,22 @@ void DDSMissionManager::stopMission()
     _arrivalCheckTimer.stop();
     _resendTimer.stop();
     _hoverTimer.stop();
+
+    // Send DO_REPOSITION to current vehicle position to stop immediately
+    if (_cmdPub && _vehicleLat != 0.0 && _state == Running) {
+        _cmdPub->sendCommand(
+            192,        // MAV_CMD_DO_REPOSITION
+            -1.0f,      // param1: speed (default)
+            1.0f,       // param2: MAV_DO_REPOSITION_FLAGS_CHANGE_MODE
+            0.0f,       // param3: loiter radius
+            NAN,        // param4: heading (keep current)
+            _vehicleLat,  // param5: current lat
+            _vehicleLon,  // param6: current lon
+            static_cast<float>(_vehicleAlt));  // param7: current alt AMSL
+        qInfo() << "[DDSMission] Stop: hold at current position"
+                << "lat=" << _vehicleLat << "lon=" << _vehicleLon << "alt=" << _vehicleAlt;
+    }
+
     _currentIndex = -1;
     emit currentWaypointChanged();
     _setState(Idle);

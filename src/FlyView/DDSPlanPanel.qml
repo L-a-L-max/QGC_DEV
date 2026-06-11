@@ -118,6 +118,20 @@ Rectangle {
                         }
 
                         QGCButton {
+                            text:       qsTr("Ins")
+                            enabled:    _state === stateIdle || _state === stateComplete
+                            onClicked:  {
+                                if (_missionMgr) {
+                                    var alt = parseFloat(altField.text) || 10.0
+                                    var spd = parseFloat(speedField.text) || -1.0
+                                    // Insert after this waypoint using vehicle position as placeholder
+                                    var lat = _missionMgr.waypointLatitude(index)
+                                    var lon = _missionMgr.waypointLongitude(index)
+                                    _missionMgr.insertWaypoint(index + 1, lat, lon, alt, spd, NaN, 0.0)
+                                }
+                            }
+                        }
+                        QGCButton {
                             text:       qsTr("Del")
                             enabled:    _state === stateIdle || _state === stateComplete
                             onClicked:  {

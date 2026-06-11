@@ -276,17 +276,31 @@ FlightMap {
                 ? QtPositioning.coordinate(_ddsMissionMgr.waypointLatitude(index),
                                            _ddsMissionMgr.waypointLongitude(index))
                 : QtPositioning.coordinate(0, 0)
-            anchorPoint.x: wpLabel.width / 2
-            anchorPoint.y: wpLabel.height / 2
-            z: QGroundControl.zOrderMapItems
-            visible: !pipMode
+            anchorPoint.x: _wpMarkerSize / 2
+            anchorPoint.y: _wpMarkerSize / 2
+            z: QGroundControl.zOrderMapItems + 1
+            visible: !pipMode && _ddsMissionMgr !== null
 
-            sourceItem: MissionItemIndexLabel {
-                id:         wpLabel
-                checked:    index === (_ddsMissionMgr ? _ddsMissionMgr.currentWaypointIndex : -1)
-                index:      index + 1
-                label:      ""
-                small:      !checked
+            property real _wpMarkerSize: index === (_ddsMissionMgr ? _ddsMissionMgr.currentWaypointIndex : -1)
+                                         ? ScreenTools.defaultFontPixelHeight * 2.2
+                                         : ScreenTools.defaultFontPixelHeight * 1.8
+
+            sourceItem: Rectangle {
+                width:  _wpMarkerSize
+                height: _wpMarkerSize
+                radius: _wpMarkerSize / 2
+                color:  index === (_ddsMissionMgr ? _ddsMissionMgr.currentWaypointIndex : -1)
+                        ? "#2ecc40" : "#e74c3c"
+                border.color: "white"
+                border.width: 2
+
+                Text {
+                    anchors.centerIn: parent
+                    text:   (index + 1).toString()
+                    color:  "white"
+                    font.pixelSize: parent.width * 0.5
+                    font.bold: true
+                }
             }
         }
     }
