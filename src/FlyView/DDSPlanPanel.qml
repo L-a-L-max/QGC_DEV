@@ -377,6 +377,72 @@ Rectangle {
                 onClicked:        { if (_missionMgr) _missionMgr.clearWaypoints() }
             }
         }
+
+        // Joystick settings
+        Rectangle {
+            Layout.fillWidth: true
+            height: 1
+            color: qgcPal.groupBorder
+        }
+
+        QGCLabel {
+            text: qsTr("Joystick Settings")
+            font.bold: true
+        }
+
+        GridLayout {
+            Layout.fillWidth: true
+            columns:          3
+            columnSpacing:    ScreenTools.defaultFontPixelWidth / 2
+            rowSpacing:       ScreenTools.defaultFontPixelHeight / 4
+
+            property var _appSettings: QGroundControl.settingsManager.appSettings
+
+            QGCLabel { text: qsTr("Max Speed") }
+            Slider {
+                id:                 maxSpeedSlider
+                Layout.fillWidth:   true
+                from:               1
+                to:                 20
+                stepSize:           1
+                value:              parent._appSettings.virtualJoystickMaxSpeed.rawValue
+                onMoved:            parent._appSettings.virtualJoystickMaxSpeed.rawValue = value
+            }
+            QGCLabel {
+                text: qsTr("%1 m/s").arg(maxSpeedSlider.value.toFixed(0))
+                Layout.minimumWidth: ScreenTools.defaultFontPixelWidth * 6
+            }
+
+            QGCLabel { text: qsTr("Deadzone") }
+            Slider {
+                id:                 deadzoneSlider
+                Layout.fillWidth:   true
+                from:               0
+                to:                 0.3
+                stepSize:           0.01
+                value:              parent._appSettings.virtualJoystickDeadzone.rawValue
+                onMoved:            parent._appSettings.virtualJoystickDeadzone.rawValue = value
+            }
+            QGCLabel {
+                text: deadzoneSlider.value.toFixed(2)
+                Layout.minimumWidth: ScreenTools.defaultFontPixelWidth * 6
+            }
+
+            QGCLabel { text: qsTr("Expo") }
+            Slider {
+                id:                 expoSlider
+                Layout.fillWidth:   true
+                from:               0
+                to:                 0.8
+                stepSize:           0.05
+                value:              parent._appSettings.virtualJoystickExpo.rawValue
+                onMoved:            parent._appSettings.virtualJoystickExpo.rawValue = value
+            }
+            QGCLabel {
+                text: expoSlider.value.toFixed(2)
+                Layout.minimumWidth: ScreenTools.defaultFontPixelWidth * 6
+            }
+        }
     }
 
     // Properties used by FlyView to add waypoints from map clicks
