@@ -89,7 +89,7 @@ void DDSVehicleManager::_createVehicle(int vehicleType)
         _link, vehicleId, componentId, MAV_AUTOPILOT_PX4, mavType);
 
     // Defer vehicle attachment to let MultiVehicleManager process the heartbeat
-    QTimer::singleShot(100, this, [this, vehicleId]() {
+    QTimer::singleShot(100, this, [this]() {
         MultiVehicleManager *mgr = MultiVehicleManager::instance();
         if (!mgr) {
             qWarning() << "[DDSVehicleManager] MultiVehicleManager not available";
