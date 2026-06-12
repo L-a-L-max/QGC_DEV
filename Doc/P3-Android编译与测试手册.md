@@ -1,6 +1,6 @@
 # P3 - Android 编译与测试手册
 
-本文档描述如何在 Ubuntu 系统上交叉编译 QGC DDS_P3 分支的 Android APK，并在 Android 手机上进行测试。
+本文档描述如何在 Ubuntu 系统上交叉编译 QGC（DDS_P3 / DDS_P5 分支）的 Android APK，并在 Android 手机上进行测试。
 
 **前提**：你已在虚拟机上安装好 Qt 6.10.3 PC 版本。
 
@@ -15,6 +15,8 @@
 5. [生成 APK](#5-生成-apk)
 6. [Android 设备测试](#6-android-设备测试)
 7. [常见问题排查](#7-常见问题排查)
+- [附录 C：常见编译错误与解决方案](#附录-c常见编译错误与解决方案)
+- [附录 D：编译成功与 APK 签名安装](#附录-d编译成功与-apk-签名安装)
 
 ---
 
@@ -1203,4 +1205,136 @@ echo "android.builder.sdkDownload=false" >> ~/.gradle/gradle.properties
 # 步骤 5：重新编译
 cd ~/qgc-android/build-android
 cmake --build . --parallel $(nproc)
+```
+
+#### 方案 D：离线安装 Build Tools 36.0.0（无需联网）
+
+如果远程服务器完全无法访问 Google，可以从仓库 `tools/` 目录中获取预打包的 Build Tools：
+
+```bash
+# 解压到 SDK 目录
+tar xzf tools/build-tools-36.0.0.tar.gz -C ~/Android/Sdk/build-tools/
+
+# 验证
+ls ~/Android/Sdk/build-tools/36.0.0/aapt2
+
+# 禁止 Gradle 自动联网下载 SDK 组件
+echo "android.builder.sdkDownload=false" >> ~/.gradle/gradle.properties
+```
+
+---
+
+## 附录 D：编译成功与 APK 签名安装
+
+### D.1 编译成功标志
+
+当所有错误修复完成后，`cmake --build . --parallel $(nproc)` 应输出：
+
+```
+BUILD SUCCESSFUL in Xm Xs
+XX actionable tasks: XX executed
+Android package built successfully in XXX.XXX ms.
+  -- File: .../android-build/build/outputs/apk/release/android-build-release-unsigned.apk
+```
+
+> **注意**：编译过程中会有大量 Java `警告: [deprecation]` 输出（来自 SDL、GStreamer、qtandroidhelpers 等第三方库），这些是过时 API 的警告，**不影响编译和运行**，可以忽略。
+
+### D.2 APK 签名
+
+生成的 APK 是 `unsigned`（未签名），不能直接安装到 Android 设备。需要签名后才能安装。
+
+#### 方法 1：Debug 签名（测试用，最简单）
+
+```bash
+# 1. 生成 debug keystore（只需执行一次）
+keytool -genkey -v \
+    -keystore ~/debug.keystore \
+    -storepass android \
+    -alias androiddebugkey \
+    -keypass android \
+    -keyalg RSA -keysize 2048 -validity 10000 \
+    -dname "CN=Android Debug,O=Android,C=US"
+
+# 2. 签名 APK
+~/Android/Sdk/build-tools/36.0.0/apksigner sign \
+    --ks ~/debug.keystore \
+    --ks-pass pass:android \
+    --key-pass pass:android \
+    --out ~/QGroundControl-signed.apk \
+    ~/qgc-android/build-android/android-build/build/outputs/apk/release/android-build-release-unsigned.apk
+
+# 3. 验证签名
+~/Android/Sdk/build-tools/36.0.0/apksigner verify ~/QGroundControl-signed.apk
+```
+
+#### 方法 2：Release 签名（正式发布用）
+
+```bash
+# 1. 生成正式 keystore（妥善保管，丢失后无法更新 APP）
+keytool -genkey -v \
+    -keystore ~/qgc-release.keystore \
+    -alias qgc \
+    -keyalg RSA -keysize 2048 -validity 10000
+
+# 2. 签名
+~/Android/Sdk/build-tools/36.0.0/apksigner sign \
+    --ks ~/qgc-release.keystore \
+    --ks-key-alias qgc \
+    --out ~/QGroundControl-release.apk \
+    ~/qgc-android/build-android/android-build/build/outputs/apk/release/android-build-release-unsigned.apk
+```
+
+### D.3 安装到 Android 设备
+
+```bash
+# USB 连接手机，确保已开启 USB 调试
+adb install ~/QGroundControl-signed.apk
+
+# 如果之前安装过旧版本，使用 -r 覆盖安装
+adb install -r ~/QGroundControl-signed.apk
+```
+
+### D.4 Android 上的 JSON 配置文件路径
+
+APK 安装后，DDS 配置文件（JSON）通过以下路径加载：
+
+| 类型 | Android 路径 |
+|------|-------------|
+| 内置默认配置 | APK 内嵌资源（只读） |
+| 用户自定义配置 | `/storage/emulated/0/Android/data/org.mavlink.qgroundcontrol/files/dds_mappings/` |
+
+添加新飞控配置：
+
+```bash
+# 通过 adb 推送
+adb push my_drone.json /storage/emulated/0/Android/data/org.mavlink.qgroundcontrol/files/dds_mappings/
+
+# 或通过手机文件管理器复制到上述目录
+```
+
+QGC 设置中选择 "Custom..." → 输入文件名 → 重连生效。
+
+### D.5 完整编译流程总结
+
+```bash
+# 1. 环境准备（参见第 2 章）
+# 2. 交叉编译 CycloneDDS（参见第 3 章）
+# 3. CMake 配置
+cmake -B build-android -S . \
+    -DCMAKE_TOOLCHAIN_FILE=~/Qt/6.10.3/android_arm64_v8a/lib/cmake/Qt6/qt.toolchain.cmake \
+    -DQT_HOST_PATH=~/Qt/6.10.3/gcc_64 \
+    -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=BOTH \
+    -G Ninja
+
+# 4. 编译 + 打包 APK
+cmake --build build-android --parallel $(nproc)
+
+# 5. 签名
+~/Android/Sdk/build-tools/36.0.0/apksigner sign \
+    --ks ~/debug.keystore --ks-pass pass:android --key-pass pass:android \
+    --out ~/QGroundControl-signed.apk \
+    build-android/android-build/build/outputs/apk/release/android-build-release-unsigned.apk
+
+# 6. 安装
+adb install ~/QGroundControl-signed.apk
 ```
