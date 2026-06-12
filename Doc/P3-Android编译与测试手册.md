@@ -695,3 +695,201 @@ UXRCE_DDS_PRT = 8888
 ```bash
 MicroXRCEAgent udp4 -p 8888
 ```
+
+
+---
+
+## 附录 C：常见编译错误与解决方案
+
+### 错误 1：NDK Toolchain 路径不匹配
+
+**现象**：
+```
+CMake Warning: The toolchain file to be chainloaded
+'/opt/android/android-ndk-r27c/build/cmake/android.toolchain.cmake' does not exist.
+```
+
+**原因**：Qt 6.10.3 Android 组件安装时记录了 NDK 路径为 `/opt/android/android-ndk-r27c/`，但实际 NDK 安装在其他位置（如 `~/Android/Sdk/ndk/27.x.xxx/`）。
+
+**解决方案**（二选一）：
+
+**方案 A：创建符号链接（推荐）**
+```bash
+# 1. 找到实际 NDK 路径
+ls ~/Android/Sdk/ndk/
+# 输出类似：27.2.12479018
+
+# 2. 创建符号链接
+sudo mkdir -p /opt/android/
+sudo ln -s ~/Android/Sdk/ndk/27.2.12479018 /opt/android/android-ndk-r27c
+
+# 3. 验证
+ls /opt/android/android-ndk-r27c/build/cmake/android.toolchain.cmake
+```
+
+**方案 B：CMake 参数覆盖**
+```bash
+# 在 cmake 配置时显式传入 NDK 路径
+cmake -B build-android -S . \
+    -DCMAKE_TOOLCHAIN_FILE=~/Qt/6.10.3/android_arm64_v8a/lib/cmake/Qt6/qt.toolchain.cmake \
+    -DQT_HOST_PATH=~/Qt/6.10.3/gcc_64 \
+    -DANDROID_SDK_ROOT=~/Android/Sdk \
+    -DANDROID_NDK=~/Android/Sdk/ndk/27.2.12479018 \
+    -DANDROID_NDK_ROOT=~/Android/Sdk/ndk/27.2.12479018 \
+    -DANDROID_PLATFORM=android-34 \
+    -DANDROID_ABI=arm64-v8a \
+    -G Ninja
+```
+
+### 错误 2：Qt6DBus 找不到（qtkeychain 依赖）
+
+**现象**：
+```
+Could NOT find Qt6DBus (missing: Qt6DBus_DIR)
+CMake Error at .cache/CPM/qtkeychain/aedf/CMakeLists.txt:107
+  Failed to find required Qt component "DBus".
+```
+
+**原因**：这是错误 1 的**连锁反应**。因为 NDK toolchain 加载失败，CMake 的 `ANDROID` 变量没有被设为 true。`qtkeychain` 库的 CMakeLists.txt 中有如下逻辑：
+```cmake
+if(UNIX AND NOT APPLE AND NOT ANDROID AND NOT HAIKU)
+    find_package(Qt6 COMPONENTS DBus REQUIRED)  # ← Android 时应跳过此行
+```
+由于 `ANDROID` 未定义，构建系统误认为在给 Linux 编译，去查找 `Qt6DBus`（Android 上不存在此模块）。
+
+**解决方案**：修复错误 1（NDK 路径）后，此错误自动消失。`ANDROID` 变量被正确设置后，`qtkeychain` 会使用 Android Keystore 后端而非 DBus。
+
+**注意**：`qtkeychain` 是 QGC 的必要依赖（用于安全存储凭据），不能跳过。在 Android 上它使用 Android Keystore API，不依赖 DBus。
+
+### 错误排查流程图
+
+```
+编译报错
+  ├── NDK Warning (toolchain not exist)
+  │     └── 修复：创建符号链接 或 传 -DANDROID_NDK 参数
+  │           └── 修复后重新 cmake 配置（需删除 build 目录）
+  │
+  ├── Qt6DBus not found
+  │     └── 根因：NDK 路径导致 ANDROID 变量未设置
+  │     └── 修复：先修复 NDK 路径问题
+  │
+  └── 其他 find_package 失败
+        └── 检查 CMAKE_PREFIX_PATH 是否包含 Qt Android 路径
+        └── 检查 QT_HOST_PATH 是否指向 Desktop Qt
+```
+
+### 验证修复成功
+
+```bash
+# 修复后重新配置
+rm -rf build-android
+cmake -B build-android ...  # 使用上述修正后的参数
+
+# 检查输出中应看到：
+# -- Android NDK: /path/to/ndk/27.x
+# -- Android ABI: arm64-v8a
+# -- Android platform: android-34
+# -- Configuring done
+
+# 如果看到 "Configuring done" 且无 Error，说明配置成功
+cmake --build build-android --parallel
+```
+
+
+---
+
+## 附录 C：常见编译错误与解决方案
+
+### 错误 1：NDK Toolchain 路径不匹配
+
+**现象**：
+```
+CMake Warning: The toolchain file to be chainloaded
+'/opt/android/android-ndk-r27c/build/cmake/android.toolchain.cmake' does not exist.
+```
+
+**原因**：Qt 6.10.3 Android 组件安装时记录了 NDK 路径为 `/opt/android/android-ndk-r27c/`，但实际 NDK 安装在其他位置（如 `~/Android/Sdk/ndk/27.x.xxx/`）。
+
+**解决方案**（二选一）：
+
+**方案 A：创建符号链接（推荐）**
+```bash
+# 1. 找到实际 NDK 路径
+ls ~/Android/Sdk/ndk/
+# 输出类似：27.2.12479018
+
+# 2. 创建符号链接
+sudo mkdir -p /opt/android/
+sudo ln -s ~/Android/Sdk/ndk/27.2.12479018 /opt/android/android-ndk-r27c
+
+# 3. 验证
+ls /opt/android/android-ndk-r27c/build/cmake/android.toolchain.cmake
+```
+
+**方案 B：CMake 参数覆盖**
+```bash
+# 在 cmake 配置时显式传入 NDK 路径
+cmake -B build-android -S . \
+    -DCMAKE_TOOLCHAIN_FILE=~/Qt/6.10.3/android_arm64_v8a/lib/cmake/Qt6/qt.toolchain.cmake \
+    -DQT_HOST_PATH=~/Qt/6.10.3/gcc_64 \
+    -DANDROID_SDK_ROOT=~/Android/Sdk \
+    -DANDROID_NDK=~/Android/Sdk/ndk/27.2.12479018 \
+    -DANDROID_NDK_ROOT=~/Android/Sdk/ndk/27.2.12479018 \
+    -DANDROID_PLATFORM=android-34 \
+    -DANDROID_ABI=arm64-v8a \
+    -G Ninja
+```
+
+### 错误 2：Qt6DBus 找不到（qtkeychain 依赖）
+
+**现象**：
+```
+Could NOT find Qt6DBus (missing: Qt6DBus_DIR)
+CMake Error at .cache/CPM/qtkeychain/aedf/CMakeLists.txt:107
+  Failed to find required Qt component "DBus".
+```
+
+**原因**：这是错误 1 的**连锁反应**。因为 NDK toolchain 加载失败，CMake 的 `ANDROID` 变量没有被设为 true。`qtkeychain` 库的 CMakeLists.txt 中有如下逻辑：
+```cmake
+if(UNIX AND NOT APPLE AND NOT ANDROID AND NOT HAIKU)
+    find_package(Qt6 COMPONENTS DBus REQUIRED)  # ← Android 时应跳过此行
+```
+由于 `ANDROID` 未定义，构建系统误认为在给 Linux 编译，去查找 `Qt6DBus`（Android 上不存在此模块）。
+
+**解决方案**：修复错误 1（NDK 路径）后，此错误自动消失。`ANDROID` 变量被正确设置后，`qtkeychain` 会使用 Android Keystore 后端而非 DBus。
+
+**注意**：`qtkeychain` 是 QGC 的必要依赖（用于安全存储凭据），不能跳过。在 Android 上它使用 Android Keystore API，不依赖 DBus。
+
+### 错误排查流程图
+
+```
+编译报错
+  ├── NDK Warning (toolchain not exist)
+  │     └── 修复：创建符号链接 或 传 -DANDROID_NDK 参数
+  │           └── 修复后重新 cmake 配置（需删除 build 目录）
+  │
+  ├── Qt6DBus not found
+  │     └── 根因：NDK 路径导致 ANDROID 变量未设置
+  │     └── 修复：先修复 NDK 路径问题
+  │
+  └── 其他 find_package 失败
+        └── 检查 CMAKE_PREFIX_PATH 是否包含 Qt Android 路径
+        └── 检查 QT_HOST_PATH 是否指向 Desktop Qt
+```
+
+### 验证修复成功
+
+```bash
+# 修复后重新配置
+rm -rf build-android
+cmake -B build-android ...  # 使用上述修正后的参数
+
+# 检查输出中应看到：
+# -- Android NDK: /path/to/ndk/27.x
+# -- Android ABI: arm64-v8a
+# -- Android platform: android-34
+# -- Configuring done
+
+# 如果看到 "Configuring done" 且无 Error，说明配置成功
+cmake --build build-android --parallel
+```
