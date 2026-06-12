@@ -893,3 +893,67 @@ cmake -B build-android ...  # 使用上述修正后的参数
 # 如果看到 "Configuring done" 且无 Error，说明配置成功
 cmake --build build-android --parallel
 ```
+
+
+### 错误 3：Android SDK build-tools 路径不匹配
+
+**现象**：
+```
+CMake Error at .../Qt6AndroidMacros.cmake:15 (message):
+  Could not locate Android SDK build tools under "/opt/android/sdk/build-tools"
+```
+
+**原因**：与错误 1 类似，Qt 6.10.3 安装时将 Android SDK 路径硬编码为 `/opt/android/sdk/`，但实际 SDK 安装在 `~/Android/Sdk/`。
+
+**解决方案**：
+
+```bash
+# 创建 SDK 符号链接
+sudo ln -sf ~/Android/Sdk /opt/android/sdk
+
+# 验证
+ls /opt/android/sdk/build-tools/
+# 应能看到版本号目录，如 35.0.0
+```
+
+### 一次性排查所有硬编码路径
+
+Qt 6.10.3 Android 的 toolchain 文件中可能硬编码了多个 `/opt/android/` 路径。可以一次性排查并全部修复：
+
+```bash
+# 查看 Qt toolchain 中所有硬编码的 /opt/android 路径
+grep -r "/opt/android" ~/Qt/6.10.3/android_arm64_v8a/lib/cmake/Qt6/qt.toolchain.cmake
+
+# 常见需要创建的符号链接：
+sudo mkdir -p /opt/android/
+sudo ln -sf ~/Android/Sdk/ndk/<你的NDK版本号> /opt/android/android-ndk-r27c
+sudo ln -sf ~/Android/Sdk /opt/android/sdk
+
+# 如果还有其他路径（如 /opt/android/openssl 等），按同样方式创建符号链接
+```
+
+### 更新后的错误排查流程图
+
+```
+Android 交叉编译报错
+  │
+  ├── NDK toolchain not exist
+  │     └── sudo ln -sf ~/Android/Sdk/ndk/<版本> /opt/android/android-ndk-r27c
+  │
+  ├── Qt6DBus not found (qtkeychain)
+  │     └── 根因：NDK 路径导致 ANDROID 变量未设置
+  │     └── 修复 NDK 路径后自动解决
+  │
+  ├── SDK build-tools not found
+  │     └── sudo ln -sf ~/Android/Sdk /opt/android/sdk
+  │
+  └── 其他 /opt/android/xxx not found
+        └── grep -r "/opt/android" ~/Qt/6.10.3/.../qt.toolchain.cmake
+        └── 对每个缺失路径创建符号链接
+```
+
+修复后务必**删除 build 目录重新配置**：
+```bash
+rm -rf build-android
+cmake -B build-android ...  # 重新执行 cmake 配置
+```
