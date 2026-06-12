@@ -1093,3 +1093,114 @@ cmake --build . --target QGroundControl_make_apk
 # 或者直接重新 ninja
 ninja
 ```
+
+
+### 错误 6：Build Tools 36.0.0 缺失 + SSL 无法连接 dl.google.com
+
+**现象**：
+Gradle 配置成功（AGP 9.0.1 已通过镜像下载），但打包时报错：
+```
+Failed to find Build Tools revision 36.0.0
+IOException: https://dl.google.com/android/repository/addons_list-6.xml
+javax.net.ssl.SSLHandshakeException: Remote host terminated the handshake
+```
+
+**原因**：
+- Android Gradle Plugin 9.0.1 要求 Build Tools ≥ 36.0.0
+- 当前只安装了 Build Tools 35.0.0
+- Gradle 尝试自动下载 36.0.0 但 `dl.google.com` 的 SSL 连接被阻断
+
+**解决方案**（二选一）：
+
+#### 方案 A：手动安装 Build Tools 36.0.0（推荐）
+
+```bash
+# 使用 sdkmanager 安装（需要能访问 dl.google.com）
+# 如果直连可以：
+~/Android/Sdk/cmdline-tools/latest/bin/sdkmanager "build-tools;36.0.0"
+
+# 如果直连不行，通过代理：
+~/Android/Sdk/cmdline-tools/latest/bin/sdkmanager --proxy=http --proxy_host=代理IP --proxy_port=端口 "build-tools;36.0.0"
+
+# 或者使用国内镜像源（腾讯）：
+~/Android/Sdk/cmdline-tools/latest/bin/sdkmanager --no_https --channel=0 "build-tools;36.0.0"
+```
+
+如果 sdkmanager 也无法下载，可以手动下载：
+
+```bash
+# 从可用网络下载 Build Tools 36.0.0
+# 方法 1：从其他能联网的电脑上运行 sdkmanager 下载后拷贝过来
+# 方法 2：直接下载 zip 包（需要知道具体 URL）
+
+# 下载完成后放到正确位置
+ls ~/Android/Sdk/build-tools/
+# 应该能看到 36.0.0 目录
+```
+
+#### 方案 B：禁用 Gradle 自动下载 SDK 组件 + 降低 Build Tools 要求
+
+在 `~/.gradle/gradle.properties` 中添加：
+
+```bash
+echo "android.builder.sdkDownload=false" >> ~/.gradle/gradle.properties
+```
+
+然后修改项目的 `build.gradle`（由 Qt 自动生成），但这个方法不可靠因为每次 cmake 配置会重新生成。
+
+**更好的方法**：在 `~/.gradle/init.gradle` 中强制覆盖 Build Tools 版本：
+
+```groovy
+// 在已有的 init.gradle 文件末尾追加
+allprojects {
+    plugins.withType(com.android.build.gradle.BasePlugin) {
+        android {
+            buildToolsVersion = "35.0.0"
+        }
+    }
+}
+```
+
+但注意 AGP 9.0.1 可能因为 35.0.0 太旧而拒绝工作。
+
+#### 方案 C：解决 SSL 根本问题（一劳永逸）
+
+SSL 握手失败通常是因为 Java 的信任证书库过期或被企业防火墙中间人劫持。
+
+```bash
+# 1. 检查系统是否能通过 curl 访问（curl 用系统 CA，不受 Java 影响）
+curl -I https://dl.google.com/android/repository/addons_list-6.xml
+
+# 2. 如果 curl 也失败 → 网络/防火墙问题，需要 VPN 或代理
+# 3. 如果 curl 成功但 Java 失败 → Java 信任库问题
+
+# 修复 Java 信任库：
+# 方法 1：重新导入系统 CA 到 Java
+sudo apt-get install -y ca-certificates-java
+sudo /usr/sbin/update-ca-certificates -f
+sudo keytool -importkeystore \
+    -srckeystore /etc/ssl/certs/java/cacerts \
+    -destkeystore $JAVA_HOME/lib/security/cacerts \
+    -srcstorepass changeit -deststorepass changeit -noprompt 2>/dev/null
+
+# 方法 2：让 Gradle 使用系统信任库
+echo "org.gradle.jvmargs=-Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts -Djavax.net.ssl.trustStorePassword=changeit" >> ~/.gradle/gradle.properties
+```
+
+#### 最简单的完整解决路线
+
+```bash
+# 步骤 1：确保能通过代理/VPN 访问 Google
+# 步骤 2：安装 Build Tools 36.0.0
+~/Android/Sdk/cmdline-tools/latest/bin/sdkmanager "build-tools;36.0.0"
+
+# 步骤 3：验证安装
+ls ~/Android/Sdk/build-tools/36.0.0/
+
+# 步骤 4：配置 Gradle 离线模式（避免后续再联网）
+echo "android.builder.sdkDownload=false" >> ~/.gradle/gradle.properties
+
+# 步骤 5：重新编译
+cd ~/qgc-android/build-android
+cmake --build . --parallel $(nproc)
+```
