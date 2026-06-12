@@ -992,3 +992,104 @@ rm -rf build-android  # 清理旧构建
 ```
 
 **注意**：如果后续遇到类似的 `-Wunused-lambda-capture` 错误，说明代码中有其他不必要的 lambda 捕获。Android NDK Clang 比桌面 GCC 更严格，所有 `-Werror` 警告都会阻止编译。
+
+
+### 错误 5：Gradle 下载 Android Gradle Plugin 失败（TLS 握手错误）
+
+**现象**：
+C++ 编译全部通过（2801/2801），但在最后生成 APK 时失败：
+```
+FAILURE: Build failed with an exception.
+* What went wrong:
+Could not resolve com.android.tools.build:gradle:9.0.1.
+  > Could not GET '.../gradle-9.0.1.pom'.
+    > The server may not support the client's requested TLS protocol versions: (TLSv1.2, TLSv1.3).
+      > Remote host terminated the handshake
+```
+
+**原因**：Gradle 无法通过 HTTPS 连接到 Google Maven 仓库（`dl.google.com`）下载 Android Gradle Plugin 9.0.1。通常是以下原因之一：
+- 企业网络/防火墙阻止了 HTTPS 出站连接
+- 网络代理未配置
+- Java 的 TLS/SSL 证书链不完整
+
+**解决方案**（按顺序尝试）：
+
+#### 方案 A：检查网络连通性
+
+```bash
+# 测试是否能访问 Google Maven
+curl -I https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/9.0.1/gradle-9.0.1.pom
+
+# 如果超时或被拒绝，说明网络有问题
+# 如果返回 200/301，说明网络正常，问题在 Java TLS
+```
+
+#### 方案 B：配置网络代理（如果在代理环境下）
+
+```bash
+# 在 ~/.gradle/gradle.properties 中添加代理设置
+mkdir -p ~/.gradle
+cat >> ~/.gradle/gradle.properties << 'EOF'
+systemProp.http.proxyHost=你的代理IP
+systemProp.http.proxyPort=代理端口
+systemProp.https.proxyHost=你的代理IP
+systemProp.https.proxyPort=代理端口
+EOF
+```
+
+#### 方案 C：修复 Java TLS 证书（最常见）
+
+```bash
+# 检查 Java 版本（需要 JDK 17+）
+java -version
+
+# 如果使用的是系统 Java，尝试更新 CA 证书
+sudo apt-get update && sudo apt-get install -y ca-certificates-java
+sudo update-ca-certificates -f
+
+# 或者显式指定 TLS 版本
+echo "org.gradle.jvmargs=-Dhttps.protocols=TLSv1.2,TLSv1.3" >> ~/.gradle/gradle.properties
+```
+
+#### 方案 D：使用国内镜像源（中国大陆网络推荐）
+
+修改 Gradle 使用阿里云镜像：
+
+```bash
+mkdir -p ~/.gradle
+cat > ~/.gradle/init.gradle << 'EOF'
+allprojects {
+    repositories {
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://maven.aliyun.com/repository/central' }
+        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+        google()
+        mavenCentral()
+    }
+    buildscript {
+        repositories {
+            maven { url 'https://maven.aliyun.com/repository/google' }
+            maven { url 'https://maven.aliyun.com/repository/central' }
+            maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+            google()
+            mavenCentral()
+        }
+    }
+}
+EOF
+```
+
+#### 方案 E：使用 VPN
+
+如果上述方案都不行，可能需要通过 VPN 访问 `dl.google.com`。
+
+#### 重新编译 APK
+
+修复网络后，不需要重新编译 C++，直接重新打包即可：
+
+```bash
+cd ~/qgc-android/build-android
+cmake --build . --target QGroundControl_make_apk
+# 或者直接重新 ninja
+ninja
+```
