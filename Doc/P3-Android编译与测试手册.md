@@ -957,3 +957,38 @@ Android 交叉编译报错
 rm -rf build-android
 cmake -B build-android ...  # 重新执行 cmake 配置
 ```
+
+
+### 错误 4：Android NDK Clang 编译器警告升级为错误
+
+**现象**：
+```
+src/DDS/DDSVehicleManager.cc:92:42: error: lambda capture 'vehicleId' is not
+required to be captured for this use [-Werror,-Wunused-lambda-capture]
+    QTimer::singleShot(100, this, [this, vehicleId]() {
+                                         ~~^~~~~~~~~
+```
+
+**原因**：`vehicleId` 声明为 `constexpr int`，C++17 标准下 constexpr 变量不需要被 lambda 捕获（编译器直接内联常量值）。桌面版 GCC 不报此警告，但 Android NDK 的 Clang 18 启用了 `-Werror,-Wunused-lambda-capture`，将此警告视为错误。
+
+**解决方案**：
+
+已在 DDS_P3 分支修复（commit `9961215`）。修改 `src/DDS/DDSVehicleManager.cc` 第 92 行：
+
+```cpp
+// 修复前（lambda 捕获了 constexpr 变量）：
+QTimer::singleShot(100, this, [this, vehicleId]() {
+
+// 修复后（移除不必要的捕获）：
+QTimer::singleShot(100, this, [this]() {
+```
+
+**拉取修复**：
+```bash
+cd ~/qgc-android
+git pull origin DDS_P3
+rm -rf build-android  # 清理旧构建
+# 重新 cmake 配置 + 编译
+```
+
+**注意**：如果后续遇到类似的 `-Wunused-lambda-capture` 错误，说明代码中有其他不必要的 lambda 捕获。Android NDK Clang 比桌面 GCC 更严格，所有 `-Werror` 警告都会阻止编译。
