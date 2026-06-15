@@ -154,6 +154,12 @@ if(QGC_ENABLE_DDS)
     target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE QGC_ENABLE_DDS)
     target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE CycloneDDS::ddsc dds_idl_types)
 
+    if(ANDROID)
+        set_property(TARGET ${CMAKE_PROJECT_NAME} APPEND PROPERTY
+            QT_ANDROID_EXTRA_LIBS "${CycloneDDS_LIBRARY}"
+        )
+    endif()
+
     qt_add_resources(${CMAKE_PROJECT_NAME} dds_mappings
         PREFIX "/dds_mappings"
         BASE "${CMAKE_SOURCE_DIR}/resources/dds_mappings"
