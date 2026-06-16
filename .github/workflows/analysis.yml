@@ -73,7 +73,7 @@ jobs:
 
       - name: Cache and install clazy packages
         if: inputs.tool == 'clazy'
-        uses: awalsh128/cache-apt-pkgs-action@v1.6.0
+        uses: awalsh128/cache-apt-pkgs-action@v1.6.1
         with:
           packages: clazy ninja-build
           version: clazy-linux-v1
