@@ -110,22 +110,20 @@ if(QGC_ENABLE_DDS)
 
     foreach(idl_file ${DDS_IDL_V4_FILES})
         get_filename_component(idl_name ${idl_file} NAME_WE)
-        set(gen_c "${DDS_IDL_V4_GEN_DIR}/${idl_name}.c")
-        set(gen_h "${DDS_IDL_V4_GEN_DIR}/${idl_name}.h")
-        # Rename output to avoid collision with v1: VehicleStatus → VehicleStatus_v4
-        set(gen_c_renamed "${DDS_IDL_V4_GEN_DIR}/${idl_name}_v4.c")
-        set(gen_h_renamed "${DDS_IDL_V4_GEN_DIR}/${idl_name}_v4.h")
+        # Copy IDL with _v4 suffix so idlc naturally generates _v4.h/.c
+        # (avoids rename + sed which breaks under Ninja shell escaping)
+        set(idl_v4_copy "${DDS_IDL_V4_GEN_DIR}/${idl_name}_v4.idl")
+        set(gen_c "${DDS_IDL_V4_GEN_DIR}/${idl_name}_v4.c")
+        set(gen_h "${DDS_IDL_V4_GEN_DIR}/${idl_name}_v4.h")
         add_custom_command(
-            OUTPUT ${gen_c_renamed} ${gen_h_renamed}
-            COMMAND ${IDLC_EXECUTABLE} -l c -t -o ${DDS_IDL_V4_GEN_DIR} ${idl_file}
-            COMMAND ${CMAKE_COMMAND} -E rename ${gen_c} ${gen_c_renamed}
-            COMMAND ${CMAKE_COMMAND} -E rename ${gen_h} ${gen_h_renamed}
-            COMMAND sed -i "s|\\#include \"${idl_name}.h\"|\\#include \"${idl_name}_v4.h\"|" ${gen_c_renamed}
+            OUTPUT ${gen_c} ${gen_h}
+            COMMAND ${CMAKE_COMMAND} -E copy ${idl_file} ${idl_v4_copy}
+            COMMAND ${IDLC_EXECUTABLE} -l c -t -o ${DDS_IDL_V4_GEN_DIR} ${idl_v4_copy}
             DEPENDS ${idl_file}
             COMMENT "idlc: Generating ${idl_name}_v4.h/.c from v4/${idl_name}.idl"
         )
-        list(APPEND DDS_GENERATED_SOURCES ${gen_c_renamed})
-        list(APPEND DDS_GENERATED_HEADERS ${gen_h_renamed})
+        list(APPEND DDS_GENERATED_SOURCES ${gen_c})
+        list(APPEND DDS_GENERATED_HEADERS ${gen_h})
     endforeach()
 
     # Build generated C files as a static library (avoids C/C++ PCH conflicts)
