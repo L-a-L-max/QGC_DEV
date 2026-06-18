@@ -184,13 +184,19 @@ static QHash<QString, QVariant> extractVehicleStatus(const void *sample)
 {
     const auto *s = static_cast<const px4_msgs_msg_dds__VehicleStatus_ *>(sample);
     return {
-        {QStringLiteral("timestamp"),      QVariant::fromValue(s->timestamp)},
-        {QStringLiteral("arming_state"),   QVariant(static_cast<int>(s->arming_state))},
-        {QStringLiteral("nav_state"),      QVariant(static_cast<int>(s->nav_state))},
-        {QStringLiteral("vehicle_type"),   QVariant(static_cast<int>(s->vehicle_type))},
-        {QStringLiteral("hil_state"),      QVariant(static_cast<int>(s->hil_state))},
-        {QStringLiteral("armed_time"),     QVariant::fromValue(s->armed_time)},
-        {QStringLiteral("takeoff_time"),   QVariant::fromValue(s->takeoff_time)},
+        {QStringLiteral("timestamp"),                QVariant::fromValue(s->timestamp)},
+        {QStringLiteral("arming_state"),             QVariant(static_cast<int>(s->arming_state))},
+        {QStringLiteral("nav_state"),                QVariant(static_cast<int>(s->nav_state))},
+        {QStringLiteral("vehicle_type"),             QVariant(static_cast<int>(s->vehicle_type))},
+        {QStringLiteral("hil_state"),                QVariant(static_cast<int>(s->hil_state))},
+        {QStringLiteral("armed_time"),               QVariant::fromValue(s->armed_time)},
+        {QStringLiteral("takeoff_time"),             QVariant::fromValue(s->takeoff_time)},
+        {QStringLiteral("failsafe"),                 QVariant(s->failsafe)},
+        {QStringLiteral("failure_detector_status"),  QVariant(static_cast<int>(s->failure_detector_status))},
+        {QStringLiteral("gcs_connection_lost"),      QVariant(s->gcs_connection_lost)},
+        {QStringLiteral("is_vtol"),                  QVariant(s->is_vtol)},
+        {QStringLiteral("in_transition_mode"),       QVariant(s->in_transition_mode)},
+        {QStringLiteral("system_type"),              QVariant(static_cast<int>(s->system_type))},
     };
 }
 
@@ -387,14 +393,19 @@ static QHash<QString, QVariant> extractVehicleStatusV4(const void *sample)
 {
     const auto *s = static_cast<const px4_msgs_msg_dds_v4__VehicleStatus_ *>(sample);
     return {
-        {QStringLiteral("timestamp"),      QVariant::fromValue(s->timestamp)},
-        {QStringLiteral("arming_state"),   QVariant(static_cast<int>(s->arming_state))},
-        {QStringLiteral("nav_state"),      QVariant(static_cast<int>(s->nav_state))},
-        {QStringLiteral("vehicle_type"),   QVariant(static_cast<int>(s->vehicle_type))},
-        {QStringLiteral("hil_state"),      QVariant(static_cast<int>(s->hil_state))},
-        {QStringLiteral("armed_time"),     QVariant::fromValue(s->armed_time)},
-        {QStringLiteral("takeoff_time"),   QVariant::fromValue(s->takeoff_time)},
-        {QStringLiteral("failsafe"),       QVariant(s->failsafe)},
+        {QStringLiteral("timestamp"),                QVariant::fromValue(s->timestamp)},
+        {QStringLiteral("arming_state"),             QVariant(static_cast<int>(s->arming_state))},
+        {QStringLiteral("nav_state"),                QVariant(static_cast<int>(s->nav_state))},
+        {QStringLiteral("vehicle_type"),             QVariant(static_cast<int>(s->vehicle_type))},
+        {QStringLiteral("hil_state"),                QVariant(static_cast<int>(s->hil_state))},
+        {QStringLiteral("armed_time"),               QVariant::fromValue(s->armed_time)},
+        {QStringLiteral("takeoff_time"),             QVariant::fromValue(s->takeoff_time)},
+        {QStringLiteral("failsafe"),                 QVariant(s->failsafe)},
+        {QStringLiteral("nav_state_display"),        QVariant(static_cast<int>(s->nav_state_display))},
+        {QStringLiteral("gcs_connection_lost"),      QVariant(s->gcs_connection_lost)},
+        {QStringLiteral("is_vtol"),                  QVariant(s->is_vtol)},
+        {QStringLiteral("in_transition_mode"),       QVariant(s->in_transition_mode)},
+        {QStringLiteral("system_type"),              QVariant(static_cast<int>(s->system_type))},
     };
 }
 

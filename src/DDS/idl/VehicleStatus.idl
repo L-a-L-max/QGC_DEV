@@ -14,12 +14,35 @@ struct VehicleStatus_ {
     octet nav_state_user_intention;
     octet nav_state;
     octet executor_in_charge;
-    octet nav_state_display;
-    boolean accepts_offboard_setpoints;
     unsigned long valid_nav_states_mask;
     unsigned long can_set_nav_states_mask;
+    unsigned short failure_detector_status;
     octet hil_state;
     octet vehicle_type;
+    boolean failsafe;
+    boolean failsafe_and_user_took_over;
+    octet failsafe_defer_state;
+    boolean gcs_connection_lost;
+    octet gcs_connection_lost_counter;
+    boolean high_latency_data_link_lost;
+    boolean is_vtol;
+    boolean is_vtol_tailsitter;
+    boolean in_transition_mode;
+    boolean in_transition_to_fw;
+    octet system_type;
+    octet system_id;
+    octet component_id;
+    boolean safety_button_available;
+    boolean safety_off;
+    boolean power_input_valid;
+    boolean usb_connected;
+    boolean open_drone_id_system_present;
+    boolean open_drone_id_system_healthy;
+    boolean parachute_system_present;
+    boolean parachute_system_healthy;
+    boolean rc_calibration_in_progress;
+    boolean calibration_enabled;
+    boolean pre_flight_checks_pass;
 };
 
 }; // dds_
