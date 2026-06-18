@@ -19,6 +19,7 @@ class DDSConfiguration : public LinkConfiguration
     Q_PROPERTY(QString  vendorMapping    READ vendorMapping   WRITE setVendorMapping   NOTIFY vendorMappingChanged)
     Q_PROPERTY(QString  namespacePrefix  READ namespacePrefix WRITE setNamespacePrefix NOTIFY namespacePrefixChanged)
     Q_PROPERTY(bool     autoDiscover     READ autoDiscover    WRITE setAutoDiscover    NOTIFY autoDiscoverChanged)
+    Q_PROPERTY(QString  idlVersion       READ idlVersion      WRITE setIdlVersion      NOTIFY idlVersionChanged)
 
 public:
     explicit DDSConfiguration(const QString &name, QObject *parent = nullptr);
@@ -37,6 +38,9 @@ public:
     bool autoDiscover() const { return _autoDiscover; }
     void setAutoDiscover(bool enabled);
 
+    QString idlVersion() const { return _idlVersion; }
+    void setIdlVersion(const QString &version);
+
     // LinkConfiguration overrides
     LinkType type() const override { return TypeDDS; }
     void copyFrom(const LinkConfiguration *source) override;
@@ -50,12 +54,14 @@ signals:
     void vendorMappingChanged();
     void namespacePrefixChanged();
     void autoDiscoverChanged();
+    void idlVersionChanged();
 
 private:
     int     _domainId        = 0;
     QString _vendorMapping;
     QString _namespacePrefix;
     bool    _autoDiscover    = true;
+    QString _idlVersion;
 };
 
 #endif // QGC_ENABLE_DDS

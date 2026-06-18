@@ -47,6 +47,7 @@ bool DDSMappingEngine::loadMappingFromJson(const QJsonObject &root)
 {
     _vendorName = root.value(QStringLiteral("vendor")).toString();
     _version = root.value(QStringLiteral("version")).toString();
+    _idlVersion = root.value(QStringLiteral("idl_version")).toString(QStringLiteral("v1"));
 
     const QJsonArray topics = root.value(QStringLiteral("topics")).toArray();
     if (topics.isEmpty()) {

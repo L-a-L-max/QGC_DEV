@@ -13,6 +13,7 @@ DDSConfiguration::DDSConfiguration(const DDSConfiguration *copy, QObject *parent
     , _vendorMapping(copy->_vendorMapping)
     , _namespacePrefix(copy->_namespacePrefix)
     , _autoDiscover(copy->_autoDiscover)
+    , _idlVersion(copy->_idlVersion)
 {
 }
 
@@ -50,6 +51,14 @@ void DDSConfiguration::setAutoDiscover(bool enabled)
     }
 }
 
+void DDSConfiguration::setIdlVersion(const QString &version)
+{
+    if (_idlVersion != version) {
+        _idlVersion = version;
+        emit idlVersionChanged();
+    }
+}
+
 void DDSConfiguration::copyFrom(const LinkConfiguration *source)
 {
     LinkConfiguration::copyFrom(source);
@@ -59,6 +68,7 @@ void DDSConfiguration::copyFrom(const LinkConfiguration *source)
         setVendorMapping(ddsSource->vendorMapping());
         setNamespacePrefix(ddsSource->namespacePrefix());
         setAutoDiscover(ddsSource->autoDiscover());
+        setIdlVersion(ddsSource->idlVersion());
     }
 }
 
@@ -69,6 +79,7 @@ void DDSConfiguration::loadSettings(QSettings &settings, const QString &root)
     setVendorMapping(settings.value(QStringLiteral("vendorMapping")).toString());
     setNamespacePrefix(settings.value(QStringLiteral("namespacePrefix")).toString());
     setAutoDiscover(settings.value(QStringLiteral("autoDiscover"), true).toBool());
+    setIdlVersion(settings.value(QStringLiteral("idlVersion")).toString());
     settings.endGroup();
 }
 
@@ -79,6 +90,7 @@ void DDSConfiguration::saveSettings(QSettings &settings, const QString &root) co
     settings.setValue(QStringLiteral("vendorMapping"), _vendorMapping);
     settings.setValue(QStringLiteral("namespacePrefix"), _namespacePrefix);
     settings.setValue(QStringLiteral("autoDiscover"), _autoDiscover);
+    settings.setValue(QStringLiteral("idlVersion"), _idlVersion);
     settings.endGroup();
 }
 

@@ -90,6 +90,10 @@ public:
     /// Mapping version string.
     QString version() const { return _version; }
 
+    /// IDL version from the mapping file (e.g. "v1", "v4").
+    /// Defaults to "v1" if not specified in JSON.
+    QString idlVersion() const { return _idlVersion; }
+
 private:
     bool _parseTopic(const QJsonObject &topicObj);
     DDSFieldMapping _parseField(const QJsonObject &fieldObj, const QString &defaultGroup) const;
@@ -100,6 +104,7 @@ private:
 
     QString _vendorName;
     QString _version;
+    QString _idlVersion = QStringLiteral("v1");
 };
 
 #endif // QGC_ENABLE_DDS

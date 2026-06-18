@@ -4,7 +4,7 @@
 
 #include <QtCore/QDebug>
 
-// IDL-generated headers (produced by idlc at build time)
+// IDL-generated headers — v1 (default, from src/DDS/idl/)
 #include "VehicleAttitude.h"
 #include "VehicleGlobalPosition.h"
 #include "VehicleLocalPosition.h"
@@ -26,24 +26,74 @@
 #include "VtolVehicleStatus.h"
 #include "TransponderReport.h"
 
+// IDL-generated headers — v4 (from src/DDS/idl/v4/)
+#include "VehicleStatus_v4.h"
+
 DDSTypeRegistry::DDSTypeRegistry()
 {
     _registerBuiltinTypes();
+    _registerV4Types();
+}
+
+void DDSTypeRegistry::setIdlVersion(const QString &version)
+{
+    _activeVersion = version;
+    qInfo() << "[DDSTypeRegistry] Active IDL version set to" << version;
 }
 
 const DDSTypeEntry *DDSTypeRegistry::typeEntry(const QString &typeName) const
 {
-    auto it = _entries.constFind(typeName);
-    return (it != _entries.constEnd()) ? &it.value() : nullptr;
+    return typeEntry(typeName, _activeVersion);
+}
+
+const DDSTypeEntry *DDSTypeRegistry::typeEntry(const QString &typeName,
+                                                const QString &version) const
+{
+    // Try the requested version first
+    auto it = _entries.constFind(_key(typeName, version));
+    if (it != _entries.constEnd()) {
+        return &it.value();
+    }
+    // Fall back to v1 if the requested version is not available
+    if (version != QLatin1String("v1")) {
+        it = _entries.constFind(_key(typeName, QStringLiteral("v1")));
+        if (it != _entries.constEnd()) {
+            return &it.value();
+        }
+    }
+    return nullptr;
 }
 
 bool DDSTypeRegistry::hasType(const QString &typeName) const
 {
-    return _entries.contains(typeName);
+    for (auto it = _entries.constBegin(); it != _entries.constEnd(); ++it) {
+        if (it.key().startsWith(typeName)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+QStringList DDSTypeRegistry::versionsForType(const QString &typeName) const
+{
+    QStringList versions;
+    for (auto it = _entries.constBegin(); it != _entries.constEnd(); ++it) {
+        const QString &key = it.key();
+        const int sep = key.indexOf(QChar::fromLatin1('\0'));
+        if (sep >= 0 && key.left(sep) == typeName) {
+            versions.append(key.mid(sep + 1));
+        }
+    }
+    return versions;
+}
+
+int DDSTypeRegistry::count() const
+{
+    return _entries.size();
 }
 
 // ---------------------------------------------------------------------------
-// Field extractors — one per PX4 message type
+// Field extractors — v1 (default)
 // ---------------------------------------------------------------------------
 
 static QHash<QString, QVariant> extractVehicleAttitude(const void *sample)
@@ -330,53 +380,90 @@ static QHash<QString, QVariant> extractTransponderReport(const void *sample)
 }
 
 // ---------------------------------------------------------------------------
-// Registration
+// Field extractors — v4
+// ---------------------------------------------------------------------------
+
+static QHash<QString, QVariant> extractVehicleStatusV4(const void *sample)
+{
+    const auto *s = static_cast<const px4_msgs_msg_dds_v4__VehicleStatus_ *>(sample);
+    return {
+        {QStringLiteral("timestamp"),      QVariant::fromValue(s->timestamp)},
+        {QStringLiteral("arming_state"),   QVariant(static_cast<int>(s->arming_state))},
+        {QStringLiteral("nav_state"),      QVariant(static_cast<int>(s->nav_state))},
+        {QStringLiteral("vehicle_type"),   QVariant(static_cast<int>(s->vehicle_type))},
+        {QStringLiteral("hil_state"),      QVariant(static_cast<int>(s->hil_state))},
+        {QStringLiteral("armed_time"),     QVariant::fromValue(s->armed_time)},
+        {QStringLiteral("takeoff_time"),   QVariant::fromValue(s->takeoff_time)},
+        {QStringLiteral("failsafe"),       QVariant(s->failsafe)},
+    };
+}
+
+// ---------------------------------------------------------------------------
+// Registration — v1 (default)
 // ---------------------------------------------------------------------------
 
 void DDSTypeRegistry::_registerBuiltinTypes()
 {
-    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::VehicleAttitude_"),
+    const QString v1 = QStringLiteral("v1");
+
+    _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::VehicleAttitude_"), v1),
                     {&px4_msgs_msg_dds__VehicleAttitude__desc, extractVehicleAttitude});
-    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::VehicleGlobalPosition_"),
+    _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::VehicleGlobalPosition_"), v1),
                     {&px4_msgs_msg_dds__VehicleGlobalPosition__desc, extractVehicleGlobalPosition});
-    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::VehicleLocalPosition_"),
+    _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::VehicleLocalPosition_"), v1),
                     {&px4_msgs_msg_dds__VehicleLocalPosition__desc, extractVehicleLocalPosition});
-    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::SensorGps_"),
+    _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::SensorGps_"), v1),
                     {&px4_msgs_msg_dds__SensorGps__desc, extractSensorGps});
-    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::BatteryStatus_"),
+    _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::BatteryStatus_"), v1),
                     {&px4_msgs_msg_dds__BatteryStatus__desc, extractBatteryStatus});
-    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::VehicleStatus_"),
+    _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::VehicleStatus_"), v1),
                     {&px4_msgs_msg_dds__VehicleStatus__desc, extractVehicleStatus});
-    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::Wind_"),
+    _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::Wind_"), v1),
                     {&px4_msgs_msg_dds__Wind__desc, extractWind});
-    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::VehicleLandDetected_"),
+    _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::VehicleLandDetected_"), v1),
                     {&px4_msgs_msg_dds__VehicleLandDetected__desc, extractVehicleLandDetected});
-    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::HomePosition_"),
+    _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::HomePosition_"), v1),
                     {&px4_msgs_msg_dds__HomePosition__desc, extractHomePosition});
-    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::AirspeedValidated_"),
+    _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::AirspeedValidated_"), v1),
                     {&px4_msgs_msg_dds__AirspeedValidated__desc, extractAirspeedValidated});
-    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::VehicleOdometry_"),
+    _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::VehicleOdometry_"), v1),
                     {&px4_msgs_msg_dds__VehicleOdometry__desc, extractVehicleOdometry});
-    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::EstimatorStatusFlags_"),
+    _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::EstimatorStatusFlags_"), v1),
                     {&px4_msgs_msg_dds__EstimatorStatusFlags__desc, extractEstimatorStatusFlags});
-    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::FailsafeFlags_"),
+    _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::FailsafeFlags_"), v1),
                     {&px4_msgs_msg_dds__FailsafeFlags__desc, extractFailsafeFlags});
-    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::VehicleControlMode_"),
+    _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::VehicleControlMode_"), v1),
                     {&px4_msgs_msg_dds__VehicleControlMode__desc, extractVehicleControlMode});
-    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::VehicleCommandAck_"),
+    _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::VehicleCommandAck_"), v1),
                     {&px4_msgs_msg_dds__VehicleCommandAck__desc, extractVehicleCommandAck});
-    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::GimbalDeviceAttitudeStatus_"),
+    _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::GimbalDeviceAttitudeStatus_"), v1),
                     {&px4_msgs_msg_dds__GimbalDeviceAttitudeStatus__desc, extractGimbalDeviceAttitudeStatus});
-    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::SensorCombined_"),
+    _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::SensorCombined_"), v1),
                     {&px4_msgs_msg_dds__SensorCombined__desc, extractSensorCombined});
-    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::ManualControlSetpoint_"),
+    _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::ManualControlSetpoint_"), v1),
                     {&px4_msgs_msg_dds__ManualControlSetpoint__desc, extractManualControlSetpoint});
-    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::VtolVehicleStatus_"),
+    _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::VtolVehicleStatus_"), v1),
                     {&px4_msgs_msg_dds__VtolVehicleStatus__desc, extractVtolVehicleStatus});
-    _entries.insert(QStringLiteral("px4_msgs::msg::dds_::TransponderReport_"),
+    _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::TransponderReport_"), v1),
                     {&px4_msgs_msg_dds__TransponderReport__desc, extractTransponderReport});
 
-    qInfo() << "[DDSTypeRegistry] Registered" << _entries.size() << "IDL types";
+    qInfo() << "[DDSTypeRegistry] Registered v1 types:" << 20;
+}
+
+// ---------------------------------------------------------------------------
+// Registration — v4
+// ---------------------------------------------------------------------------
+
+void DDSTypeRegistry::_registerV4Types()
+{
+    const QString v4 = QStringLiteral("v4");
+
+    // VehicleStatus v4 — different struct layout (older PX4 firmware)
+    _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::VehicleStatus_"), v4),
+                    {&px4_msgs_msg_dds_v4__VehicleStatus__desc, extractVehicleStatusV4});
+
+    qInfo() << "[DDSTypeRegistry] Registered v4 types: 1 (VehicleStatus)";
+    qInfo() << "[DDSTypeRegistry] Total registered:" << _entries.size() << "type entries";
 }
 
 #endif // QGC_ENABLE_DDS

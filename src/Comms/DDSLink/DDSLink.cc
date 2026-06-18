@@ -53,9 +53,16 @@ bool DDSLink::_connect()
         return false;
     }
 
+    // Apply IDL version from mapping (or config override)
+    const QString idlVer = config->idlVersion().isEmpty()
+                               ? _mappingEngine.idlVersion()
+                               : config->idlVersion();
+    _typeRegistry.setIdlVersion(idlVer);
+
     qInfo() << "[DDSLink] Loaded mapping:" << mappingName
              << "topics:" << _mappingEngine.topicCount()
-             << "fields:" << _mappingEngine.fieldCount();
+             << "fields:" << _mappingEngine.fieldCount()
+             << "idl_version:" << idlVer;
 
     _participant = _createParticipant(config->domainId());
     if (_participant < 0) {

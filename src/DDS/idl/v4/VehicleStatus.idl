@@ -1,0 +1,20 @@
+module px4_msgs {
+module msg {
+module dds_v4_ {
+
+@topic
+struct VehicleStatus_ {
+    unsigned long long timestamp;
+    unsigned long long armed_time;
+    unsigned long long takeoff_time;
+    octet arming_state;
+    octet nav_state;
+    octet hil_state;
+    octet vehicle_type;
+    boolean failsafe;
+    octet failure_detector_status;
+};
+
+}; // dds_v4_
+}; // msg
+}; // px4_msgs

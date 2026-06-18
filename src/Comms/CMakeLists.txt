@@ -102,10 +102,36 @@ if(QGC_ENABLE_DDS)
         list(APPEND DDS_GENERATED_HEADERS ${gen_h})
     endforeach()
 
+    # --- IDL Type Generation — v4 (alternate IDL versions) ---
+    set(DDS_IDL_V4_DIR "${CMAKE_SOURCE_DIR}/src/DDS/idl/v4")
+    set(DDS_IDL_V4_GEN_DIR "${CMAKE_BINARY_DIR}/dds_generated_v4")
+    file(MAKE_DIRECTORY ${DDS_IDL_V4_GEN_DIR})
+    file(GLOB DDS_IDL_V4_FILES "${DDS_IDL_V4_DIR}/*.idl")
+
+    foreach(idl_file ${DDS_IDL_V4_FILES})
+        get_filename_component(idl_name ${idl_file} NAME_WE)
+        set(gen_c "${DDS_IDL_V4_GEN_DIR}/${idl_name}.c")
+        set(gen_h "${DDS_IDL_V4_GEN_DIR}/${idl_name}.h")
+        # Rename output to avoid collision with v1: VehicleStatus → VehicleStatus_v4
+        set(gen_c_renamed "${DDS_IDL_V4_GEN_DIR}/${idl_name}_v4.c")
+        set(gen_h_renamed "${DDS_IDL_V4_GEN_DIR}/${idl_name}_v4.h")
+        add_custom_command(
+            OUTPUT ${gen_c_renamed} ${gen_h_renamed}
+            COMMAND ${IDLC_EXECUTABLE} -l c -t -o ${DDS_IDL_V4_GEN_DIR} ${idl_file}
+            COMMAND ${CMAKE_COMMAND} -E rename ${gen_c} ${gen_c_renamed}
+            COMMAND ${CMAKE_COMMAND} -E rename ${gen_h} ${gen_h_renamed}
+            COMMAND sed -i "s|\\#include \"${idl_name}.h\"|\\#include \"${idl_name}_v4.h\"|" ${gen_c_renamed}
+            DEPENDS ${idl_file}
+            COMMENT "idlc: Generating ${idl_name}_v4.h/.c from v4/${idl_name}.idl"
+        )
+        list(APPEND DDS_GENERATED_SOURCES ${gen_c_renamed})
+        list(APPEND DDS_GENERATED_HEADERS ${gen_h_renamed})
+    endforeach()
+
     # Build generated C files as a static library (avoids C/C++ PCH conflicts)
     add_library(dds_idl_types STATIC ${DDS_GENERATED_SOURCES} ${DDS_GENERATED_HEADERS})
     target_include_directories(dds_idl_types
-        PUBLIC ${DDS_IDL_GEN_DIR}
+        PUBLIC ${DDS_IDL_GEN_DIR} ${DDS_IDL_V4_GEN_DIR}
         PRIVATE ${CycloneDDS_INCLUDE_DIR}
     )
     target_link_libraries(dds_idl_types PRIVATE CycloneDDS::ddsc)
@@ -149,6 +175,7 @@ if(QGC_ENABLE_DDS)
             ${CMAKE_CURRENT_SOURCE_DIR}/DDSLink
             ${CMAKE_SOURCE_DIR}/src/DDS
             ${DDS_IDL_GEN_DIR}
+            ${DDS_IDL_V4_GEN_DIR}
     )
 
     target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE QGC_ENABLE_DDS)
@@ -166,6 +193,7 @@ if(QGC_ENABLE_DDS)
         FILES
             "${CMAKE_SOURCE_DIR}/resources/dds_mappings/_default.json"
             "${CMAKE_SOURCE_DIR}/resources/dds_mappings/_vendor_template.json"
+            "${CMAKE_SOURCE_DIR}/resources/dds_mappings/_default_v4.json"
             "${CMAKE_SOURCE_DIR}/resources/dds_mappings/cuav_x7pro.json"
     )
 endif()

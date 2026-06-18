@@ -1,8 +1,8 @@
 {
   "vendor": "px4_standard",
   "version": "1.3.0",
-  "idl_version": "v1",
-  "description": "Default PX4 DDS topic mapping for QGC (PX4 v1.17). Maps PX4 XRCE-DDS publications to QGC FactGroups. Only includes mappings to verified Fact names. Set idl_version to 'v4' for older PX4 firmware.",
+  "idl_version": "v4",
+  "description": "PX4 DDS topic mapping using v4 IDL (older PX4 firmware). VehicleStatus uses the v4 struct layout with failsafe field.",
   "topics": [
     {
       "dds_topic": "/fmu/out/vehicle_attitude",
