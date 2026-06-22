@@ -9,12 +9,13 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import com.skydroid.rcsdk.KeyManager;
 import com.skydroid.rcsdk.RCSDKManager;
 import com.skydroid.rcsdk.SDKManagerCallBack;
-import com.skydroid.rcsdk.key.KeyManager;
-import com.skydroid.rcsdk.key.RemoteControllerKey;
-import com.skydroid.rcsdk.key.AirLinkKey;
 import com.skydroid.rcsdk.common.callback.CompletionCallbackWith;
+import com.skydroid.rcsdk.common.error.SkyException;
+import com.skydroid.rcsdk.key.AirLinkKey;
+import com.skydroid.rcsdk.key.RemoteControllerKey;
 
 /**
  * Manages the Skydroid RCSDK lifecycle and provides static accessors
@@ -46,21 +47,7 @@ public class SkydroidRCSDKManager {
 
     private static final SDKManagerCallBack sSdkCallback = new SDKManagerCallBack() {
         @Override
-        public void onInitSuccess() {
-            Log.i(TAG, "SDK init success");
-            sStatusText = "sdk init success, connecting...";
-            RCSDKManager.INSTANCE.setMainThreadCallBack(true);
-            RCSDKManager.INSTANCE.connectToRC();
-        }
-
-        @Override
-        public void onInitFail(int code, String msg) {
-            Log.e(TAG, "SDK init fail: code=" + code + " msg=" + msg);
-            sStatusText = "sdk init fail: " + msg;
-        }
-
-        @Override
-        public void onConnected() {
+        public void onRcConnected() {
             Log.i(TAG, "RC connected");
             sRCConnected = true;
             sStatusText = "rc connected";
@@ -68,7 +55,13 @@ public class SkydroidRCSDKManager {
         }
 
         @Override
-        public void onDisconnect() {
+        public void onRcConnectFail(SkyException e) {
+            Log.e(TAG, "RC connect fail: " + (e != null ? e.getMessage() : "unknown"));
+            sStatusText = "rc connect fail: " + (e != null ? e.getMessage() : "unknown");
+        }
+
+        @Override
+        public void onRcDisconnect() {
             Log.w(TAG, "RC disconnected");
             sRCConnected = false;
             sStatusText = "rc disconnected";
@@ -89,7 +82,7 @@ public class SkydroidRCSDKManager {
         }
 
         @Override
-        public void onFailure(int code, String msg) {
+        public void onFailure(SkyException e) {
             // Silently ignore transient failures; previous values are retained
         }
     };
@@ -104,6 +97,8 @@ public class SkydroidRCSDKManager {
         Log.i(TAG, "Initializing RCSDK for Skydroid G-series");
         try {
             RCSDKManager.INSTANCE.initSDK(activity, sSdkCallback);
+            RCSDKManager.INSTANCE.setMainThreadCallBack(true);
+            RCSDKManager.INSTANCE.connectToRC();
         } catch (Exception e) {
             Log.e(TAG, "RCSDK initSDK exception", e);
             sStatusText = "init exception: " + e.getMessage();

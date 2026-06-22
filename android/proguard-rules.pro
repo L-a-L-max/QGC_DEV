@@ -26,6 +26,15 @@
 -keep class org.mavlink.qgroundcontrol.QGCFtdiDriver { *; }
 -keep class org.mavlink.qgroundcontrol.QGCSDLManager { *; }
 
+# Skydroid RCSDK - accessed via JNI from SkydroidJoystick C++
+-keep class org.mavlink.qgroundcontrol.SkydroidRCSDKManager { *; }
+-keep class com.skydroid.rcsdk.** { *; }
+-keep class com.skydroid.h16.** { *; }
+
+# Kotlin runtime - required by Skydroid RCSDK
+-keep class kotlin.** { *; }
+-dontwarn kotlin.**
+
 # SDL - native method stubs required for JNI registration
 -keep class org.libsdl.app.** { *; }
 

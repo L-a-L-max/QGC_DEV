@@ -195,6 +195,14 @@ if(QGC_ENABLE_DDS)
         set_property(TARGET ${CMAKE_PROJECT_NAME} APPEND PROPERTY
             QT_ANDROID_EXTRA_LIBS "${CycloneDDS_LIBRARY}"
         )
+
+        # Skydroid RCSDK native libraries (extracted from rcsdk-v1.9.1.aar)
+        file(GLOB _rcsdk_so_files "${CMAKE_SOURCE_DIR}/android/libs/arm64-v8a/*.so")
+        if(_rcsdk_so_files)
+            set_property(TARGET ${CMAKE_PROJECT_NAME} APPEND PROPERTY
+                QT_ANDROID_EXTRA_LIBS ${_rcsdk_so_files}
+            )
+        endif()
     endif()
 
     qt_add_resources(${CMAKE_PROJECT_NAME} dds_mappings
