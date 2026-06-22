@@ -1,7 +1,8 @@
 {
   "vendor": "cuav_x7pro",
-  "version": "1.0.0",
-  "description": "CUAV X7+ Pro flight controller DDS topic mapping. Based on PX4 standard but without _v1 suffix on some topics. Compatible with CUAV firmware based on PX4 v1.14-v1.15.",
+  "version": "1.1.0",
+  "idl_version": "px4_v116",
+  "description": "CUAV X7+ Pro flight controller DDS topic mapping. Uses PX4 v1.16 IDL layout. Topic names without _v1 suffix match CUAV firmware conventions.",
   "topics": [
     {
       "dds_topic": "/fmu/out/vehicle_attitude",

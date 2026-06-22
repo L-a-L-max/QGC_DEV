@@ -102,34 +102,44 @@ if(QGC_ENABLE_DDS)
         list(APPEND DDS_GENERATED_HEADERS ${gen_h})
     endforeach()
 
-    # --- IDL Type Generation — v4 (alternate IDL versions) ---
-    set(DDS_IDL_V4_DIR "${CMAKE_SOURCE_DIR}/src/DDS/idl/v4")
-    set(DDS_IDL_V4_GEN_DIR "${CMAKE_BINARY_DIR}/dds_generated_v4")
-    file(MAKE_DIRECTORY ${DDS_IDL_V4_GEN_DIR})
-    file(GLOB DDS_IDL_V4_FILES "${DDS_IDL_V4_DIR}/*.idl")
+    # --- IDL Type Generation — versioned overrides ---
+    # Helper macro: compile IDL files from a subdirectory with a name suffix.
+    # The suffix is appended to each generated .c/.h filename so that symbols
+    # from different versions do not collide.
+    macro(dds_compile_idl_variant IDL_VARIANT_DIR IDL_SUFFIX)
+        set(_VAR_GEN_DIR "${CMAKE_BINARY_DIR}/dds_generated${IDL_SUFFIX}")
+        file(MAKE_DIRECTORY ${_VAR_GEN_DIR})
+        file(GLOB _VAR_IDL_FILES "${IDL_VARIANT_DIR}/*.idl")
+        foreach(_idl_file ${_VAR_IDL_FILES})
+            get_filename_component(_idl_name ${_idl_file} NAME_WE)
+            set(_idl_copy "${_VAR_GEN_DIR}/${_idl_name}${IDL_SUFFIX}.idl")
+            set(_gen_c "${_VAR_GEN_DIR}/${_idl_name}${IDL_SUFFIX}.c")
+            set(_gen_h "${_VAR_GEN_DIR}/${_idl_name}${IDL_SUFFIX}.h")
+            add_custom_command(
+                OUTPUT ${_gen_c} ${_gen_h}
+                COMMAND ${CMAKE_COMMAND} -E copy ${_idl_file} ${_idl_copy}
+                COMMAND ${IDLC_EXECUTABLE} -l c -t -o ${_VAR_GEN_DIR} ${_idl_copy}
+                DEPENDS ${_idl_file}
+                COMMENT "idlc: Generating ${_idl_name}${IDL_SUFFIX}.h/.c"
+            )
+            list(APPEND DDS_GENERATED_SOURCES ${_gen_c})
+            list(APPEND DDS_GENERATED_HEADERS ${_gen_h})
+        endforeach()
+        list(APPEND DDS_VARIANT_GEN_DIRS ${_VAR_GEN_DIR})
+    endmacro()
 
-    foreach(idl_file ${DDS_IDL_V4_FILES})
-        get_filename_component(idl_name ${idl_file} NAME_WE)
-        # Copy IDL with _v4 suffix so idlc naturally generates _v4.h/.c
-        # (avoids rename + sed which breaks under Ninja shell escaping)
-        set(idl_v4_copy "${DDS_IDL_V4_GEN_DIR}/${idl_name}_v4.idl")
-        set(gen_c "${DDS_IDL_V4_GEN_DIR}/${idl_name}_v4.c")
-        set(gen_h "${DDS_IDL_V4_GEN_DIR}/${idl_name}_v4.h")
-        add_custom_command(
-            OUTPUT ${gen_c} ${gen_h}
-            COMMAND ${CMAKE_COMMAND} -E copy ${idl_file} ${idl_v4_copy}
-            COMMAND ${IDLC_EXECUTABLE} -l c -t -o ${DDS_IDL_V4_GEN_DIR} ${idl_v4_copy}
-            DEPENDS ${idl_file}
-            COMMENT "idlc: Generating ${idl_name}_v4.h/.c from v4/${idl_name}.idl"
-        )
-        list(APPEND DDS_GENERATED_SOURCES ${gen_c})
-        list(APPEND DDS_GENERATED_HEADERS ${gen_h})
-    endforeach()
+    set(DDS_VARIANT_GEN_DIRS "")
+
+    # V4 (latest px4_msgs VehicleStatus layout)
+    dds_compile_idl_variant("${CMAKE_SOURCE_DIR}/src/DDS/idl/v4" "_v4")
+
+    # PX4 v1.16 overrides (CUAV X7+ firmware)
+    dds_compile_idl_variant("${CMAKE_SOURCE_DIR}/src/DDS/idl/px4_v116" "_v116")
 
     # Build generated C files as a static library (avoids C/C++ PCH conflicts)
     add_library(dds_idl_types STATIC ${DDS_GENERATED_SOURCES} ${DDS_GENERATED_HEADERS})
     target_include_directories(dds_idl_types
-        PUBLIC ${DDS_IDL_GEN_DIR} ${DDS_IDL_V4_GEN_DIR}
+        PUBLIC ${DDS_IDL_GEN_DIR} ${DDS_VARIANT_GEN_DIRS}
         PRIVATE ${CycloneDDS_INCLUDE_DIR}
     )
     target_link_libraries(dds_idl_types PRIVATE CycloneDDS::ddsc)
@@ -173,7 +183,7 @@ if(QGC_ENABLE_DDS)
             ${CMAKE_CURRENT_SOURCE_DIR}/DDSLink
             ${CMAKE_SOURCE_DIR}/src/DDS
             ${DDS_IDL_GEN_DIR}
-            ${DDS_IDL_V4_GEN_DIR}
+            ${DDS_VARIANT_GEN_DIRS}
     )
 
     target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE QGC_ENABLE_DDS)

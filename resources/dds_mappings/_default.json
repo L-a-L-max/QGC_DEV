@@ -1,8 +1,8 @@
 {
   "vendor": "px4_standard",
-  "version": "1.3.0",
+  "version": "2.0.0",
   "idl_version": "v1",
-  "description": "Default PX4 DDS topic mapping for QGC. Uses V1 IDL (MESSAGE_VERSION=1, matching PX4 firmware). Set idl_version to 'v4' for relay/ground stations with newer px4_msgs (MESSAGE_VERSION=4).",
+  "description": "Default PX4 DDS topic mapping (PX4 v1.17 SITL). Base IDL files match PX4 v1.17 message layouts. Set idl_version to 'px4_v116' for PX4 v1.16 / CUAV X7+, or 'v4' for relay with latest px4_msgs.",
   "topics": [
     {
       "dds_topic": "/fmu/out/vehicle_attitude",

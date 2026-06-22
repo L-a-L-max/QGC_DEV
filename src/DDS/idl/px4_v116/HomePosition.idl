@@ -1,0 +1,24 @@
+module px4_msgs {
+module msg {
+module dds_v116_ {
+
+@topic
+struct HomePosition_ {
+    unsigned long long timestamp;
+    double lat;
+    double lon;
+    float alt;
+    float x;
+    float y;
+    float z;
+    float yaw;
+    boolean valid_alt;
+    boolean valid_hpos;
+    boolean valid_lpos;
+    boolean manual_home;
+    unsigned long update_count;
+};
+
+}; // dds_v116_
+}; // msg
+}; // px4_msgs

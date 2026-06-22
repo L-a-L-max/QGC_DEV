@@ -20574,4 +20574,56 @@ ROTATION_NONE indicates component points in direction of flight.</translation>
       <translation type="unfinished">Invalid stress test count (must be &gt; 0): %1</translation>
     </message>
   </context>
+  <context>
+    <name>DDSSettings</name>
+    <message>
+      <source>Domain ID</source>
+      <translation>域 ID</translation>
+    </message>
+    <message>
+      <source>DDS Profile</source>
+      <translation>DDS 配置</translation>
+    </message>
+    <message>
+      <source>JSON file name (without .json)</source>
+      <translation>JSON 文件名（不含 .json）</translation>
+    </message>
+    <message>
+      <source>Place custom .json files in:
+~/.config/QGroundControl.org/dds_mappings/</source>
+      <translation>将自定义 .json 文件放置在：
+~/.config/QGroundControl.org/dds_mappings/</translation>
+    </message>
+    <message>
+      <source>Namespace Prefix</source>
+      <translation>命名空间前缀</translation>
+    </message>
+    <message>
+      <source>e.g. /drone1</source>
+      <translation>例如 /drone1</translation>
+    </message>
+    <message>
+      <source>Auto-Discover Topics</source>
+      <translation>自动发现话题</translation>
+    </message>
+    <message>
+      <source>DDS link connects to PX4 flight controllers via CycloneDDS. Select a profile matching your PX4 firmware version. Domain ID must match the PX4 DDS domain (default 0).
+
+PX4 SITL v1.17 — Software-in-the-loop simulation (latest)
+PX4 SITL v1.16 — Software-in-the-loop simulation (v1.16)
+CUAV X7+ (v1.16) — CUAV X7+ Pro hardware with v1.16 firmware</source>
+      <translation>DDS 链路通过 CycloneDDS 连接 PX4 飞控。请选择与固件版本匹配的配置。域 ID 必须与 PX4 DDS 域一致（默认 0）。
+
+PX4 SITL v1.17 — 软件在环仿真（最新版）
+PX4 SITL v1.16 — 软件在环仿真（v1.16 版）
+CUAV X7+ (v1.16) — CUAV X7+ Pro 硬件，v1.16 固件</translation>
+    </message>
+  </context>
+  <context>
+    <name>DDSConfiguration</name>
+    <message>
+      <source>DDS Link Settings</source>
+      <translation>DDS 链路设置</translation>
+    </message>
+  </context>
 </TS>

@@ -29,6 +29,11 @@
 // IDL-generated headers — v4 (from src/DDS/idl/v4/)
 #include "VehicleStatus_v4.h"
 
+// IDL-generated headers — v116 (from src/DDS/idl/px4_v116/)
+#include "BatteryStatus_v116.h"
+#include "HomePosition_v116.h"
+#include "AirspeedValidated_v116.h"
+
 DDSTypeRegistry::DDSTypeRegistry()
 {
     _registerBuiltinTypes();
@@ -386,6 +391,54 @@ static QHash<QString, QVariant> extractTransponderReport(const void *sample)
 }
 
 // ---------------------------------------------------------------------------
+// Field extractors — px4_v116 (CUAV X7+ / PX4 v1.16 firmware)
+// ---------------------------------------------------------------------------
+
+static QHash<QString, QVariant> extractBatteryStatusV116(const void *sample)
+{
+    const auto *s = static_cast<const px4_msgs_msg_dds_v116__BatteryStatus_ *>(sample);
+    return {
+        {QStringLiteral("timestamp"),    QVariant::fromValue(s->timestamp)},
+        {QStringLiteral("connected"),    QVariant(s->connected)},
+        {QStringLiteral("voltage_v"),    QVariant(static_cast<double>(s->voltage_v))},
+        {QStringLiteral("current_a"),    QVariant(static_cast<double>(s->current_a))},
+        {QStringLiteral("remaining"),    QVariant(static_cast<double>(s->remaining))},
+        {QStringLiteral("discharged_mah"), QVariant(static_cast<double>(s->discharged_mah))},
+        {QStringLiteral("temperature"),  QVariant(static_cast<double>(s->temperature))},
+        {QStringLiteral("cell_count"),   QVariant(static_cast<int>(s->cell_count))},
+        {QStringLiteral("time_remaining_s"), QVariant(static_cast<double>(s->time_remaining_s))},
+        {QStringLiteral("warning"),      QVariant(static_cast<int>(s->warning))},
+        {QStringLiteral("id"),           QVariant(static_cast<int>(s->id))},
+        {QStringLiteral("serial_number"), QVariant(static_cast<int>(s->serial_number))},
+    };
+}
+
+static QHash<QString, QVariant> extractHomePositionV116(const void *sample)
+{
+    const auto *s = static_cast<const px4_msgs_msg_dds_v116__HomePosition_ *>(sample);
+    return {
+        {QStringLiteral("timestamp"), QVariant::fromValue(s->timestamp)},
+        {QStringLiteral("lat"),       QVariant(s->lat)},
+        {QStringLiteral("lon"),       QVariant(s->lon)},
+        {QStringLiteral("alt"),       QVariant(static_cast<double>(s->alt))},
+        {QStringLiteral("yaw"),       QVariant(static_cast<double>(s->yaw))},
+        {QStringLiteral("valid_alt"), QVariant(s->valid_alt)},
+        {QStringLiteral("valid_hpos"), QVariant(s->valid_hpos)},
+    };
+}
+
+static QHash<QString, QVariant> extractAirspeedValidatedV116(const void *sample)
+{
+    const auto *s = static_cast<const px4_msgs_msg_dds_v116__AirspeedValidated_ *>(sample);
+    return {
+        {QStringLiteral("timestamp"),              QVariant::fromValue(s->timestamp)},
+        {QStringLiteral("indicated_airspeed_m_s"), QVariant(static_cast<double>(s->indicated_airspeed_m_s))},
+        {QStringLiteral("calibrated_airspeed_m_s"), QVariant(static_cast<double>(s->calibrated_airspeed_m_s))},
+        {QStringLiteral("true_airspeed_m_s"),      QVariant(static_cast<double>(s->true_airspeed_m_s))},
+    };
+}
+
+// ---------------------------------------------------------------------------
 // Field extractors — v4
 // ---------------------------------------------------------------------------
 
@@ -416,6 +469,7 @@ static QHash<QString, QVariant> extractVehicleStatusV4(const void *sample)
 void DDSTypeRegistry::_registerBuiltinTypes()
 {
     const QString v1 = QStringLiteral("v1");
+    const QString px4_v117 = QStringLiteral("px4_v117");
 
     _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::VehicleAttitude_"), v1),
                     {&px4_msgs_msg_dds__VehicleAttitude__desc, extractVehicleAttitude});
@@ -458,7 +512,16 @@ void DDSTypeRegistry::_registerBuiltinTypes()
     _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::TransponderReport_"), v1),
                     {&px4_msgs_msg_dds__TransponderReport__desc, extractTransponderReport});
 
-    qInfo() << "[DDSTypeRegistry] Registered v1 types:" << 20;
+    // Register the same base types under "px4_v117" alias (v1.17 SITL uses the same base IDL)
+    for (auto it = _entries.constBegin(); it != _entries.constEnd(); ++it) {
+        const QString &key = it.key();
+        const int sep = key.indexOf(QChar::fromLatin1('\0'));
+        if (sep >= 0 && key.mid(sep + 1) == v1) {
+            _entries.insert(_key(key.left(sep), px4_v117), it.value());
+        }
+    }
+
+    qInfo() << "[DDSTypeRegistry] Registered v1/px4_v117 types";
 }
 
 // ---------------------------------------------------------------------------
@@ -468,12 +531,50 @@ void DDSTypeRegistry::_registerBuiltinTypes()
 void DDSTypeRegistry::_registerV4Types()
 {
     const QString v4 = QStringLiteral("v4");
+    const QString v116 = QStringLiteral("px4_v116");
 
-    // VehicleStatus v4 — different struct layout (older PX4 firmware)
+    // VehicleStatus v4 — latest px4_msgs layout (relay / ground station)
     _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::VehicleStatus_"), v4),
                     {&px4_msgs_msg_dds_v4__VehicleStatus__desc, extractVehicleStatusV4});
 
+    // PX4 v1.16 overrides — CUAV X7+ firmware
+    _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::BatteryStatus_"), v116),
+                    {&px4_msgs_msg_dds_v116__BatteryStatus__desc, extractBatteryStatusV116});
+    _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::HomePosition_"), v116),
+                    {&px4_msgs_msg_dds_v116__HomePosition__desc, extractHomePositionV116});
+    _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::AirspeedValidated_"), v116),
+                    {&px4_msgs_msg_dds_v116__AirspeedValidated__desc, extractAirspeedValidatedV116});
+
+    // For px4_v116 types that didn't change from base, copy from v1
+    const QStringList baseTypes = {
+        QStringLiteral("px4_msgs::msg::dds_::VehicleAttitude_"),
+        QStringLiteral("px4_msgs::msg::dds_::VehicleGlobalPosition_"),
+        QStringLiteral("px4_msgs::msg::dds_::VehicleLocalPosition_"),
+        QStringLiteral("px4_msgs::msg::dds_::SensorGps_"),
+        QStringLiteral("px4_msgs::msg::dds_::VehicleStatus_"),
+        QStringLiteral("px4_msgs::msg::dds_::Wind_"),
+        QStringLiteral("px4_msgs::msg::dds_::VehicleLandDetected_"),
+        QStringLiteral("px4_msgs::msg::dds_::VehicleOdometry_"),
+        QStringLiteral("px4_msgs::msg::dds_::EstimatorStatusFlags_"),
+        QStringLiteral("px4_msgs::msg::dds_::FailsafeFlags_"),
+        QStringLiteral("px4_msgs::msg::dds_::VehicleControlMode_"),
+        QStringLiteral("px4_msgs::msg::dds_::VehicleCommandAck_"),
+        QStringLiteral("px4_msgs::msg::dds_::GimbalDeviceAttitudeStatus_"),
+        QStringLiteral("px4_msgs::msg::dds_::SensorCombined_"),
+        QStringLiteral("px4_msgs::msg::dds_::ManualControlSetpoint_"),
+        QStringLiteral("px4_msgs::msg::dds_::VtolVehicleStatus_"),
+        QStringLiteral("px4_msgs::msg::dds_::TransponderReport_"),
+    };
+    const QString v1 = QStringLiteral("v1");
+    for (const auto &typeName : baseTypes) {
+        auto it = _entries.constFind(_key(typeName, v1));
+        if (it != _entries.constEnd()) {
+            _entries.insert(_key(typeName, v116), it.value());
+        }
+    }
+
     qInfo() << "[DDSTypeRegistry] Registered v4 types: 1 (VehicleStatus)";
+    qInfo() << "[DDSTypeRegistry] Registered px4_v116 types: 3 overrides + base";
     qInfo() << "[DDSTypeRegistry] Total registered:" << _entries.size() << "type entries";
 }
 
