@@ -158,7 +158,7 @@ Rectangle {
                                 _missionMgr.waypointLongitude(index).toFixed(6))
                                 : ""
                             font.pointSize: ScreenTools.smallFontPointSize
-                            color: index === _currentWp ? qgcPal.buttonHighlightText : qgcPal.disabledText
+                            color: index === _currentWp ? qgcPal.buttonHighlightText : qgcPal.colorGrey
                             visible: !wpDelegate.isEditing
 
                             MouseArea {

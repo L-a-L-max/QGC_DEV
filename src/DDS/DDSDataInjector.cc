@@ -222,6 +222,9 @@ void DDSDataInjector::_updateVehicleCoordinate(const QHash<QString, QVariant> &f
     QGeoCoordinate coord(lat, lon, alt);
     if (coord.isValid()) {
         _vehicle->setCoordinateFromDDS(coord);
+        _lastLat = lat;
+        _lastLon = lon;
+        _lastAlt = alt;
         if (_missionManager) {
             _missionManager->updateVehiclePosition(lat, lon, alt);
         }
@@ -264,8 +267,20 @@ void DDSDataInjector::_updateVehicleState(const QHash<QString, QVariant> &fields
             emit _vehicle->armedChanged(armed);
             if (armed) {
                 _vehicle->_trajectoryPoints->start();
+                // Fallback: use current global position as home when home_position topic is unavailable
+                if (!_homeSetFromArm && _lastLat != 0.0 && _lastLon != 0.0) {
+                    _homeSetFromArm = true;
+                    QGeoCoordinate homeCoord(_lastLat, _lastLon, _lastAlt);
+                    _vehicle->_setHomePosition(homeCoord);
+                    if (_missionManager) {
+                        _missionManager->updateHomePosition(_lastLat, _lastLon, _lastAlt);
+                    }
+                    qInfo() << "[DDSDataInjector] Home position set from arm location:"
+                            << _lastLat << _lastLon << _lastAlt;
+                }
             } else {
                 _vehicle->_trajectoryPoints->stop();
+                _homeSetFromArm = false;
             }
         }
     }

@@ -4,6 +4,7 @@
 #include "DDSManualControlPublisher.h"
 
 #include <QtCore/QDebug>
+#include <cmath>
 
 #ifdef Q_OS_ANDROID
 #include <QJniObject>
@@ -123,6 +124,18 @@ void SkydroidJoystick::_poll()
     const float pitch  = _normalizeChannel(pitchRaw,    true);
     const float yaw    = _normalizeChannel(yawRaw,      true);
     const float thrust = _normalizeChannel(throttleRaw, false);
+
+    // Suppress sending when all sticks are at center (idle) to avoid
+    // interfering with auto/mission flight modes on PX4
+    static constexpr float kIdleDeadzone = 0.05f;
+    const bool sticksIdle = (fabsf(roll) < kIdleDeadzone &&
+                             fabsf(pitch) < kIdleDeadzone &&
+                             fabsf(yaw) < kIdleDeadzone &&
+                             fabsf(thrust - 0.5f) < kIdleDeadzone);
+    if (sticksIdle) {
+        // Don't send manual_control when sticks are centered
+        return;
+    }
 
     // Send via DDS
     if (_manualControlPub && _manualControlPub->isReady()) {

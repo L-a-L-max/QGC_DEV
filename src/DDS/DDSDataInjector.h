@@ -101,6 +101,10 @@ private:
     int  _armingState  = 0;
     bool _batteryCreated = false;
     bool _readyToFlySet = false;
+    bool _homeSetFromArm = false;
+    double _lastLat = 0.0;
+    double _lastLon = 0.0;
+    double _lastAlt = 0.0;
     DDSMissionManager *_missionManager = nullptr;
 };
 
