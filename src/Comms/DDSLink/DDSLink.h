@@ -14,6 +14,7 @@
 #include "DDSManualControlPublisher.h"
 #include "DDSGotoPublisher.h"
 #include "DDSMissionManager.h"
+#include "SkydroidJoystick.h"
 
 #include <dds/dds.h>
 
@@ -47,6 +48,7 @@ public:
     DDSManualControlPublisher *manualControlPublisher() { return &_manualControlPublisher; }
     DDSGotoPublisher *gotoPublisher() { return &_gotoPublisher; }
     DDSMissionManager *missionManager() { return &_missionManager; }
+    SkydroidJoystick *skydroidJoystick() { return &_skydroidJoystick; }
 
 signals:
     void ddsMessageReceived(const QString &topicName,
@@ -79,6 +81,7 @@ private:
     DDSManualControlPublisher  _manualControlPublisher;
     DDSGotoPublisher            _gotoPublisher;
     DDSMissionManager            _missionManager;
+    SkydroidJoystick               _skydroidJoystick;
 
     QTimer               _pollTimer;
     dds_entity_t         _participant = DDS_ENTITY_NIL;

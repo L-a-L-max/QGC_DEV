@@ -113,6 +113,29 @@ ColumnLayout {
         }
     }
 
+    RowLayout {
+        spacing: _colSpacing
+
+        QGCCheckBoxSlider {
+            text:       qsTr("Skydroid Joystick (G16/G20)")
+            checked:    subEditConfig.skydroidJoystick
+            onClicked:  subEditConfig.skydroidJoystick = checked
+        }
+    }
+
+    QGCLabel {
+        Layout.preferredWidth:  _secondColumnWidth
+        Layout.fillWidth:       true
+        visible:                subEditConfig.skydroidJoystick
+        font.pointSize:         ScreenTools.smallFontPointSize
+        wrapMode:               Text.WordWrap
+        color:                  qgcPal.text
+        text:                   qsTr("Enable to use Skydroid G-series remote controller joysticks "
+                                     + "to control the drone via DDS. Requires RCSDK AAR integrated "
+                                     + "into the APK build. Channel mapping: "
+                                     + "CH1=Roll, CH2=Pitch, CH3=Throttle, CH4=Yaw (Mode 2).")
+    }
+
     QGCLabel {
         Layout.preferredWidth:  _secondColumnWidth
         Layout.fillWidth:       true

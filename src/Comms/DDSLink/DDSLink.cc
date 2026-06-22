@@ -115,6 +115,10 @@ bool DDSLink::_connect()
     _missionManager.setGotoPublisher(&_gotoPublisher);
     _missionManager.setCommandPublisher(&_commandPublisher);
 
+    // Wire Skydroid joystick to manual control publisher
+    _skydroidJoystick.setManualControlPublisher(&_manualControlPublisher);
+    _skydroidJoystick.setEnabled(config->skydroidJoystick());
+
     _pollTimer.start();
 
     _connected = true;

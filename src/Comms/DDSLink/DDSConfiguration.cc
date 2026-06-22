@@ -14,6 +14,7 @@ DDSConfiguration::DDSConfiguration(const DDSConfiguration *copy, QObject *parent
     , _namespacePrefix(copy->_namespacePrefix)
     , _autoDiscover(copy->_autoDiscover)
     , _idlVersion(copy->_idlVersion)
+    , _skydroidJoystick(copy->_skydroidJoystick)
 {
 }
 
@@ -59,6 +60,14 @@ void DDSConfiguration::setIdlVersion(const QString &version)
     }
 }
 
+void DDSConfiguration::setSkydroidJoystick(bool enabled)
+{
+    if (_skydroidJoystick != enabled) {
+        _skydroidJoystick = enabled;
+        emit skydroidJoystickChanged();
+    }
+}
+
 void DDSConfiguration::copyFrom(const LinkConfiguration *source)
 {
     LinkConfiguration::copyFrom(source);
@@ -69,6 +78,7 @@ void DDSConfiguration::copyFrom(const LinkConfiguration *source)
         setNamespacePrefix(ddsSource->namespacePrefix());
         setAutoDiscover(ddsSource->autoDiscover());
         setIdlVersion(ddsSource->idlVersion());
+        setSkydroidJoystick(ddsSource->skydroidJoystick());
     }
 }
 
@@ -80,6 +90,7 @@ void DDSConfiguration::loadSettings(QSettings &settings, const QString &root)
     setNamespacePrefix(settings.value(QStringLiteral("namespacePrefix")).toString());
     setAutoDiscover(settings.value(QStringLiteral("autoDiscover"), true).toBool());
     setIdlVersion(settings.value(QStringLiteral("idlVersion")).toString());
+    setSkydroidJoystick(settings.value(QStringLiteral("skydroidJoystick"), false).toBool());
     settings.endGroup();
 }
 
@@ -91,6 +102,7 @@ void DDSConfiguration::saveSettings(QSettings &settings, const QString &root) co
     settings.setValue(QStringLiteral("namespacePrefix"), _namespacePrefix);
     settings.setValue(QStringLiteral("autoDiscover"), _autoDiscover);
     settings.setValue(QStringLiteral("idlVersion"), _idlVersion);
+    settings.setValue(QStringLiteral("skydroidJoystick"), _skydroidJoystick);
     settings.endGroup();
 }
 

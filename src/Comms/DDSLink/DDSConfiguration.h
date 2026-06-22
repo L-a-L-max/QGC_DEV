@@ -20,6 +20,7 @@ class DDSConfiguration : public LinkConfiguration
     Q_PROPERTY(QString  namespacePrefix  READ namespacePrefix WRITE setNamespacePrefix NOTIFY namespacePrefixChanged)
     Q_PROPERTY(bool     autoDiscover     READ autoDiscover    WRITE setAutoDiscover    NOTIFY autoDiscoverChanged)
     Q_PROPERTY(QString  idlVersion       READ idlVersion      WRITE setIdlVersion      NOTIFY idlVersionChanged)
+    Q_PROPERTY(bool     skydroidJoystick READ skydroidJoystick WRITE setSkydroidJoystick NOTIFY skydroidJoystickChanged)
 
 public:
     explicit DDSConfiguration(const QString &name, QObject *parent = nullptr);
@@ -41,6 +42,9 @@ public:
     QString idlVersion() const { return _idlVersion; }
     void setIdlVersion(const QString &version);
 
+    bool skydroidJoystick() const { return _skydroidJoystick; }
+    void setSkydroidJoystick(bool enabled);
+
     // LinkConfiguration overrides
     LinkType type() const override { return TypeDDS; }
     void copyFrom(const LinkConfiguration *source) override;
@@ -55,6 +59,7 @@ signals:
     void namespacePrefixChanged();
     void autoDiscoverChanged();
     void idlVersionChanged();
+    void skydroidJoystickChanged();
 
 private:
     int     _domainId        = 0;
@@ -62,6 +67,7 @@ private:
     QString _namespacePrefix;
     bool    _autoDiscover    = true;
     QString _idlVersion;
+    bool    _skydroidJoystick = false;
 };
 
 #endif // QGC_ENABLE_DDS

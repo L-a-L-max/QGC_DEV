@@ -41,6 +41,7 @@ public class QGCActivity extends QtActivity {
 
         QGCUsbSerialManager.initialize(this);
         QGCSDLManager.initialize(this);
+        SkydroidRCSDKManager.initialize(this);
         m_storagePermissionController = new QGCStoragePermissionController(this);
     }
 
@@ -59,6 +60,7 @@ public class QGCActivity extends QtActivity {
     @Override
     protected void onDestroy() {
         try {
+            SkydroidRCSDKManager.shutdown();
             QGCSDLManager.cleanup();
             releaseMulticastLock();
             QGCUsbSerialManager.cleanup(this);
