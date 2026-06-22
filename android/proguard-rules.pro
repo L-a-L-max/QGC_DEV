@@ -35,6 +35,10 @@
 -keep class kotlin.** { *; }
 -dontwarn kotlin.**
 
+# RCSDK optional dependencies (not used by QGC, suppress R8 missing class errors)
+-dontwarn com.skydroid.fpvplayer.**
+-dontwarn org.apache.commons.net.**
+
 # SDL - native method stubs required for JNI registration
 -keep class org.libsdl.app.** { *; }
 
