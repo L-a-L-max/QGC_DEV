@@ -132,9 +132,61 @@ OpenStreetMap 不需要任何 API Key，开箱即用：
 
 ---
 
-## 4. Android 编译
+## 4. 手柄/摇杆 DDS 控制
 
-### 4.1 编译步骤
+### 4.1 概述
+
+DDS_P5_V2 支持通过标准 USB/蓝牙手柄（Xbox、PS、北通等）直接通过 DDS 控制无人机，
+无需 MAVLink 中转。当 QGC 检测到当前连接类型为 DDS 时，手柄数据会自动路由到
+`DDSManualControlPublisher`，通过 DDS `manual_control_input` 话题发送给飞控。
+
+### 4.2 数据流
+
+```
+USB/蓝牙手柄 → SDL3 → JoystickManager → Vehicle::sendJoystickDataThreadSafe()
+                                              │
+                                              ├── DDS 连接 → DDSManualControlPublisher
+                                              │               → rt/fmu/in/manual_control_input
+                                              │               → PX4 飞控
+                                              │
+                                              └── MAVLink 连接 → MAVLink MANUAL_CONTROL (#69)
+                                                                 → PX4 飞控
+```
+
+路由是自动的：QGC 检查当前活动链路类型，DDS 链路走 DDS 通道，MAVLink 链路走原有通道。
+
+### 4.3 使用方法
+
+1. 将 USB 手柄插入手机/电脑（或通过蓝牙配对）
+2. 打开 QGC，创建 DDS 连接并连接飞控
+3. 进入 Settings → Joystick（摇杆设置）
+4. QGC 自动检测到手柄，进行校准
+5. 手柄数据自动通过 DDS 发送，无需额外配置
+
+### 4.4 支持的手柄类型
+
+所有被 Android/Linux 系统识别为标准游戏手柄的设备均可使用：
+
+| 手柄 | 连接方式 | 支持情况 |
+|------|---------|---------|
+| Xbox 手柄 | USB / 蓝牙 | ✓ |
+| PS4/PS5 手柄 | USB / 蓝牙 | ✓ |
+| 北通手柄 | USB / 蓝牙 | ✓ |
+| 罗技手柄 | USB | ✓ |
+| 其他标准 HID 手柄 | USB / 蓝牙 | ✓ |
+
+### 4.5 注意事项
+
+- 手柄校准在 QGC 的 Joystick 设置界面完成，与连接类型无关
+- DDS 模式下手柄值范围：roll/pitch/yaw ∈ [-1, +1]，thrust ∈ [0, 1]
+- 死区和指数曲线设置使用 QGC 的 Virtual Joystick 参数（Settings → General）
+- 如果同时存在 DDS 和 MAVLink 连接，手柄数据只发送到主连接
+
+---
+
+## 5. Android 编译
+
+### 5.1 编译步骤
 
 ```bash
 # 1. 拉取最新代码
@@ -158,7 +210,7 @@ cmake --build build-android
 # 5. 签名 APK（按之前的流程）
 ```
 
-### 4.2 多版本 IDL 编译说明
+### 5.2 多版本 IDL 编译说明
 
 CMake 会自动处理多版本 IDL：
 - `src/DDS/idl/*.idl` → 基础类型（v1.17 默认）
@@ -169,7 +221,7 @@ CMake 会自动处理多版本 IDL：
 
 ---
 
-## 5. 文件结构
+## 6. 文件结构
 
 ```
 src/DDS/idl/
@@ -195,6 +247,9 @@ src/DDS/
 src/Comms/DDSLink/
 ├── DDSConfiguration.cc/.h      # 连接配置（含 idlVersion）
 └── DDSLink.cc/.h               # DDS 连接实现
+
+src/Vehicle/
+└── Vehicle.cc                  # 手柄→DDS 路由（sendJoystickDataThreadSafe）
 
 src/AppSettings/
 └── DDSSettings.qml             # DDS 设置界面（版本选择器）

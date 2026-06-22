@@ -39,6 +39,8 @@
 #ifdef QGC_ENABLE_DDS
 #include "DDSCommandPublisher.h"
 #include "DDSManualControlPublisher.h"
+#include "DDSLink.h"
+#include "DDSConfiguration.h"
 #endif
 #include "MessageIntervalManager.h"
 #include "TerrainQueryCoordinator.h"
@@ -3098,6 +3100,17 @@ void Vehicle::sendJoystickDataThreadSafe(float roll, float pitch, float yaw, flo
     if (sharedLink->linkConfiguration()->isHighLatency()) {
         return;
     }
+
+#ifdef QGC_ENABLE_DDS
+    if (sharedLink->linkConfiguration()->type() == LinkConfiguration::TypeDDS) {
+        auto *ddsLink = qobject_cast<DDSLink *>(sharedLink.get());
+        if (ddsLink && ddsLink->manualControlPublisher()) {
+            // Joystick values are in [-1,1]; thrust is [0,1]
+            ddsLink->manualControlPublisher()->sendManualControl(roll, pitch, yaw, thrust);
+        }
+        return;
+    }
+#endif
 
     mavlink_message_t message;
 
