@@ -15,6 +15,8 @@ DDSConfiguration::DDSConfiguration(const DDSConfiguration *copy, QObject *parent
     , _autoDiscover(copy->_autoDiscover)
     , _idlVersion(copy->_idlVersion)
     , _skydroidJoystick(copy->_skydroidJoystick)
+    , _zenohBridge(copy->_zenohBridge)
+    , _zenohEndpoint(copy->_zenohEndpoint)
 {
 }
 
@@ -68,6 +70,22 @@ void DDSConfiguration::setSkydroidJoystick(bool enabled)
     }
 }
 
+void DDSConfiguration::setZenohBridge(bool enabled)
+{
+    if (_zenohBridge != enabled) {
+        _zenohBridge = enabled;
+        emit zenohBridgeChanged();
+    }
+}
+
+void DDSConfiguration::setZenohEndpoint(const QString &endpoint)
+{
+    if (_zenohEndpoint != endpoint) {
+        _zenohEndpoint = endpoint;
+        emit zenohEndpointChanged();
+    }
+}
+
 void DDSConfiguration::copyFrom(const LinkConfiguration *source)
 {
     LinkConfiguration::copyFrom(source);
@@ -79,6 +97,8 @@ void DDSConfiguration::copyFrom(const LinkConfiguration *source)
         setAutoDiscover(ddsSource->autoDiscover());
         setIdlVersion(ddsSource->idlVersion());
         setSkydroidJoystick(ddsSource->skydroidJoystick());
+        setZenohBridge(ddsSource->zenohBridge());
+        setZenohEndpoint(ddsSource->zenohEndpoint());
     }
 }
 
@@ -91,6 +111,8 @@ void DDSConfiguration::loadSettings(QSettings &settings, const QString &root)
     setAutoDiscover(settings.value(QStringLiteral("autoDiscover"), true).toBool());
     setIdlVersion(settings.value(QStringLiteral("idlVersion")).toString());
     setSkydroidJoystick(settings.value(QStringLiteral("skydroidJoystick"), false).toBool());
+    setZenohBridge(settings.value(QStringLiteral("zenohBridge"), false).toBool());
+    setZenohEndpoint(settings.value(QStringLiteral("zenohEndpoint"), QStringLiteral("tcp/192.168.1.100:7447")).toString());
     settings.endGroup();
 }
 
@@ -103,6 +125,8 @@ void DDSConfiguration::saveSettings(QSettings &settings, const QString &root) co
     settings.setValue(QStringLiteral("autoDiscover"), _autoDiscover);
     settings.setValue(QStringLiteral("idlVersion"), _idlVersion);
     settings.setValue(QStringLiteral("skydroidJoystick"), _skydroidJoystick);
+    settings.setValue(QStringLiteral("zenohBridge"), _zenohBridge);
+    settings.setValue(QStringLiteral("zenohEndpoint"), _zenohEndpoint);
     settings.endGroup();
 }
 

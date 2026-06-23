@@ -21,6 +21,8 @@ class DDSConfiguration : public LinkConfiguration
     Q_PROPERTY(bool     autoDiscover     READ autoDiscover    WRITE setAutoDiscover    NOTIFY autoDiscoverChanged)
     Q_PROPERTY(QString  idlVersion       READ idlVersion      WRITE setIdlVersion      NOTIFY idlVersionChanged)
     Q_PROPERTY(bool     skydroidJoystick READ skydroidJoystick WRITE setSkydroidJoystick NOTIFY skydroidJoystickChanged)
+    Q_PROPERTY(bool     zenohBridge      READ zenohBridge     WRITE setZenohBridge     NOTIFY zenohBridgeChanged)
+    Q_PROPERTY(QString  zenohEndpoint    READ zenohEndpoint   WRITE setZenohEndpoint   NOTIFY zenohEndpointChanged)
 
 public:
     explicit DDSConfiguration(const QString &name, QObject *parent = nullptr);
@@ -45,6 +47,12 @@ public:
     bool skydroidJoystick() const { return _skydroidJoystick; }
     void setSkydroidJoystick(bool enabled);
 
+    bool zenohBridge() const { return _zenohBridge; }
+    void setZenohBridge(bool enabled);
+
+    QString zenohEndpoint() const { return _zenohEndpoint; }
+    void setZenohEndpoint(const QString &endpoint);
+
     // LinkConfiguration overrides
     LinkType type() const override { return TypeDDS; }
     void copyFrom(const LinkConfiguration *source) override;
@@ -60,6 +68,8 @@ signals:
     void autoDiscoverChanged();
     void idlVersionChanged();
     void skydroidJoystickChanged();
+    void zenohBridgeChanged();
+    void zenohEndpointChanged();
 
 private:
     int     _domainId        = 0;
@@ -68,6 +78,8 @@ private:
     bool    _autoDiscover    = true;
     QString _idlVersion;
     bool    _skydroidJoystick = false;
+    bool    _zenohBridge      = false;
+    QString _zenohEndpoint     = QStringLiteral("tcp/192.168.1.100:7447");
 };
 
 #endif // QGC_ENABLE_DDS

@@ -15,6 +15,7 @@
 #include "DDSGotoPublisher.h"
 #include "DDSMissionManager.h"
 #include "SkydroidJoystick.h"
+#include "ZenohBridge.h"
 
 #include <dds/dds.h>
 
@@ -63,7 +64,7 @@ private:
     bool _connect() override;
     void _writeBytes(const QByteArray &bytes) override;
 
-    dds_entity_t _createParticipant(int domainId);
+    dds_entity_t _createParticipant(int domainId, bool localhostOnly = false);
     void         _destroyParticipant(dds_entity_t participant);
     void         _subscribeToTopics(dds_entity_t participant, const QStringList &topicNames);
     QStringList  _runDiscovery(dds_entity_t participant);
@@ -82,6 +83,7 @@ private:
     DDSGotoPublisher            _gotoPublisher;
     DDSMissionManager            _missionManager;
     SkydroidJoystick               _skydroidJoystick;
+    ZenohBridge                      _zenohBridge;
 
     QTimer               _pollTimer;
     dds_entity_t         _participant = DDS_ENTITY_NIL;

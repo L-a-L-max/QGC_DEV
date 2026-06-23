@@ -136,6 +136,68 @@ ColumnLayout {
                                      + "CH1=Roll, CH2=Pitch, CH3=Throttle, CH4=Yaw (Mode 2).")
     }
 
+    // --- Zenoh Bridge Section ---
+    Rectangle {
+        Layout.fillWidth:   true
+        height:             1
+        color:              qgcPal.groupBorder
+        Layout.topMargin:   _rowSpacing
+        Layout.bottomMargin: _rowSpacing / 2
+    }
+
+    QGCLabel {
+        text:               qsTr("Zenoh Bridge")
+        font.pointSize:     ScreenTools.mediumFontPointSize
+        font.bold:          true
+    }
+
+    RowLayout {
+        spacing: _colSpacing
+
+        QGCCheckBoxSlider {
+            text:       qsTr("Enable Zenoh Bridge")
+            checked:    subEditConfig.zenohBridge
+            onClicked:  subEditConfig.zenohBridge = checked
+        }
+    }
+
+    RowLayout {
+        spacing:    _colSpacing
+        visible:    subEditConfig.zenohBridge
+
+        QGCLabel { text: qsTr("Remote Endpoint") }
+        QGCTextField {
+            id:                     zenohEndpointField
+            text:                   subEditConfig.zenohEndpoint
+            Layout.preferredWidth:  _secondColumnWidth
+            placeholderText:        qsTr("tcp/192.168.1.100:7447")
+            onTextChanged:          subEditConfig.zenohEndpoint = zenohEndpointField.text
+        }
+    }
+
+    QGCLabel {
+        Layout.preferredWidth:  _secondColumnWidth
+        Layout.fillWidth:       true
+        visible:                subEditConfig.zenohBridge
+        font.pointSize:         ScreenTools.smallFontPointSize
+        wrapMode:               Text.WordWrap
+        color:                  qgcPal.text
+        text:                   qsTr("Zenoh bridge embeds a local zenoh-bridge-dds subprocess that "
+                                     + "connects to the remote Zenoh router on the aircraft. "
+                                     + "This eliminates the need for a relay/intermediate machine.\n\n"
+                                     + "Endpoint format: tcp/<aircraft_ip>:7447\n"
+                                     + "The bridge binary must be placed in APK assets as 'zenoh-bridge-dds'.")
+    }
+
+    // --- Help Text ---
+    Rectangle {
+        Layout.fillWidth:   true
+        height:             1
+        color:              qgcPal.groupBorder
+        Layout.topMargin:   _rowSpacing
+        Layout.bottomMargin: _rowSpacing / 2
+    }
+
     QGCLabel {
         Layout.preferredWidth:  _secondColumnWidth
         Layout.fillWidth:       true
@@ -146,6 +208,8 @@ ColumnLayout {
                                      + "Domain ID must match the PX4 DDS domain (default 0).\n\n"
                                      + "PX4 SITL v1.17 — Software-in-the-loop simulation (latest)\n"
                                      + "PX4 SITL v1.16 — Software-in-the-loop simulation (v1.16)\n"
-                                     + "CUAV X7+ (v1.16) — CUAV X7+ Pro hardware with v1.16 firmware")
+                                     + "CUAV X7+ (v1.16) — CUAV X7+ Pro hardware with v1.16 firmware\n\n"
+                                     + "Zenoh Bridge — Enable to connect directly to aircraft via Zenoh "
+                                     + "protocol, bypassing the need for a DDS relay machine.")
     }
 }

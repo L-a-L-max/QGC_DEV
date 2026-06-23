@@ -178,6 +178,8 @@ if(QGC_ENABLE_DDS)
             ${CMAKE_SOURCE_DIR}/src/DDS/DDSWaypoint.h
             ${CMAKE_SOURCE_DIR}/src/DDS/SkydroidJoystick.cc
             ${CMAKE_SOURCE_DIR}/src/DDS/SkydroidJoystick.h
+            ${CMAKE_SOURCE_DIR}/src/DDS/ZenohBridge.cc
+            ${CMAKE_SOURCE_DIR}/src/DDS/ZenohBridge.h
     )
 
     target_include_directories(${CMAKE_PROJECT_NAME}

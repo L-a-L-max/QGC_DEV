@@ -64,8 +64,24 @@ bool DDSLink::_connect()
              << "fields:" << _mappingEngine.fieldCount()
              << "idl_version:" << idlVer;
 
-    _participant = _createParticipant(config->domainId());
+    // When Zenoh bridge is enabled, start the local bridge subprocess first.
+    // The bridge connects to the remote Zenoh router and creates a local DDS
+    // participant — DDSLink then talks to it over localhost DDS.
+    if (config->zenohBridge()) {
+        if (!_zenohBridge.start(config->zenohEndpoint(), config->domainId())) {
+            qWarning() << "[DDSLink] Zenoh bridge failed to start:"
+                       << _zenohBridge.lastError();
+            emit communicationError(tr("DDS Link"),
+                tr("Zenoh bridge failed: %1").arg(_zenohBridge.lastError()));
+            return false;
+        }
+        qInfo() << "[DDSLink] Zenoh bridge started, endpoint:"
+                << config->zenohEndpoint();
+    }
+
+    _participant = _createParticipant(config->domainId(), config->zenohBridge());
     if (_participant < 0) {
+        if (config->zenohBridge()) _zenohBridge.stop();
         emit communicationError(tr("DDS Link"), tr("Failed to create DDS participant"));
         return false;
     }
@@ -216,6 +232,8 @@ void DDSLink::disconnect()
         _participant = DDS_ENTITY_NIL;
     }
 
+    _zenohBridge.stop();
+
     _connected = false;
     emit disconnected();
     qInfo() << "[DDSLink] DDS link disconnected";
@@ -254,62 +272,24 @@ void DDSLink::_onPollTimer()
 // CycloneDDS implementations
 // ---------------------------------------------------------------------------
 
-dds_entity_t DDSLink::_createParticipant(int domainId)
+dds_entity_t DDSLink::_createParticipant(int domainId, bool localhostOnly)
 {
     // Only set config if not already configured by user
     if (qEnvironmentVariableIsEmpty("CYCLONEDDS_URI")) {
-        // Enumerate all physical network interfaces (skip loopback, docker, bridges)
-        // CycloneDDS by default picks ONE interface arbitrarily; if PX4 Agent is on
-        // a different subnet, SEDP unicast messages never reach it.
-        QString interfacesXml;
-        const auto allIfaces = QNetworkInterface::allInterfaces();
-        for (const QNetworkInterface &iface : allIfaces) {
-            if (!(iface.flags() & QNetworkInterface::IsUp)) continue;
-            if (iface.flags() & QNetworkInterface::IsLoopBack) continue;
-            const QString name = iface.name();
-            // Skip virtual/container interfaces
-            if (name.startsWith(QStringLiteral("docker")) ||
-                name.startsWith(QStringLiteral("br-")) ||
-                name.startsWith(QStringLiteral("veth")) ||
-                name.startsWith(QStringLiteral("virbr"))) {
-                continue;
-            }
-            // Must have at least one IPv4 address
-            bool hasIpv4 = false;
-            for (const QNetworkAddressEntry &entry : iface.addressEntries()) {
-                if (entry.ip().protocol() == QAbstractSocket::IPv4Protocol) {
-                    hasIpv4 = true;
-                    break;
-                }
-            }
-            if (!hasIpv4) continue;
-            interfacesXml += QStringLiteral("        <NetworkInterface name=\"%1\" multicast=\"true\"/>\n").arg(name);
-            qInfo() << "[DDSLink] Using network interface:" << name;
-        }
-
         QString config;
-        if (interfacesXml.isEmpty()) {
-            // Fallback: let CycloneDDS choose automatically
-            config = QStringLiteral(
-                "<CycloneDDS>"
-                "  <Domain id=\"any\">"
-                "    <Compatibility>"
-                "      <StandardsConformance>lax</StandardsConformance>"
-                "    </Compatibility>"
-                "    <Tracing>"
-                "      <Category>discovery</Category>"
-                "      <OutputFile>stderr</OutputFile>"
-                "      <Verbosity>config</Verbosity>"
-                "    </Tracing>"
-                "  </Domain>"
-                "</CycloneDDS>");
-        } else {
+
+        if (localhostOnly) {
+            // Zenoh bridge mode: restrict DDS discovery to localhost only.
+            // The bridge subprocess handles remote Zenoh communication;
+            // DDSLink only needs to talk to the local bridge over loopback.
             config = QStringLiteral(
                 "<CycloneDDS>"
                 "  <Domain id=\"any\">"
                 "    <General>"
-                "      <Interfaces>\n%1"
+                "      <Interfaces>"
+                "        <NetworkInterface address=\"127.0.0.1\" multicast=\"true\"/>"
                 "      </Interfaces>"
+                "      <AllowMulticast>spdp</AllowMulticast>"
                 "    </General>"
                 "    <Compatibility>"
                 "      <StandardsConformance>lax</StandardsConformance>"
@@ -320,7 +300,67 @@ dds_entity_t DDSLink::_createParticipant(int domainId)
                 "      <Verbosity>config</Verbosity>"
                 "    </Tracing>"
                 "  </Domain>"
-                "</CycloneDDS>").arg(interfacesXml);
+                "</CycloneDDS>");
+            qInfo() << "[DDSLink] CycloneDDS configured for localhost (Zenoh bridge mode)";
+        } else {
+            // Direct DDS mode: enumerate all physical network interfaces
+            QString interfacesXml;
+            const auto allIfaces = QNetworkInterface::allInterfaces();
+            for (const QNetworkInterface &iface : allIfaces) {
+                if (!(iface.flags() & QNetworkInterface::IsUp)) continue;
+                if (iface.flags() & QNetworkInterface::IsLoopBack) continue;
+                const QString name = iface.name();
+                if (name.startsWith(QStringLiteral("docker")) ||
+                    name.startsWith(QStringLiteral("br-")) ||
+                    name.startsWith(QStringLiteral("veth")) ||
+                    name.startsWith(QStringLiteral("virbr"))) {
+                    continue;
+                }
+                bool hasIpv4 = false;
+                for (const QNetworkAddressEntry &entry : iface.addressEntries()) {
+                    if (entry.ip().protocol() == QAbstractSocket::IPv4Protocol) {
+                        hasIpv4 = true;
+                        break;
+                    }
+                }
+                if (!hasIpv4) continue;
+                interfacesXml += QStringLiteral("        <NetworkInterface name=\"%1\" multicast=\"true\"/>\n").arg(name);
+                qInfo() << "[DDSLink] Using network interface:" << name;
+            }
+
+            if (interfacesXml.isEmpty()) {
+                config = QStringLiteral(
+                    "<CycloneDDS>"
+                    "  <Domain id=\"any\">"
+                    "    <Compatibility>"
+                    "      <StandardsConformance>lax</StandardsConformance>"
+                    "    </Compatibility>"
+                    "    <Tracing>"
+                    "      <Category>discovery</Category>"
+                    "      <OutputFile>stderr</OutputFile>"
+                    "      <Verbosity>config</Verbosity>"
+                    "    </Tracing>"
+                    "  </Domain>"
+                    "</CycloneDDS>");
+            } else {
+                config = QStringLiteral(
+                    "<CycloneDDS>"
+                    "  <Domain id=\"any\">"
+                    "    <General>"
+                    "      <Interfaces>\n%1"
+                    "      </Interfaces>"
+                    "    </General>"
+                    "    <Compatibility>"
+                    "      <StandardsConformance>lax</StandardsConformance>"
+                    "    </Compatibility>"
+                    "    <Tracing>"
+                    "      <Category>discovery</Category>"
+                    "      <OutputFile>stderr</OutputFile>"
+                    "      <Verbosity>config</Verbosity>"
+                    "    </Tracing>"
+                    "  </Domain>"
+                    "</CycloneDDS>").arg(interfacesXml);
+            }
         }
 
         qputenv("CYCLONEDDS_URI", config.toUtf8());
