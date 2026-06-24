@@ -28,6 +28,9 @@
 
 # Skydroid RCSDK - accessed via JNI from SkydroidJoystick C++
 -keep class org.mavlink.qgroundcontrol.SkydroidRCSDKManager { *; }
+
+# Zenoh bridge manager - accessed via JNI from ZenohBridge C++
+-keep class org.mavlink.qgroundcontrol.ZenohBridgeManager { *; }
 -keep class com.skydroid.rcsdk.** { *; }
 -keep class com.skydroid.h16.** { *; }
 
