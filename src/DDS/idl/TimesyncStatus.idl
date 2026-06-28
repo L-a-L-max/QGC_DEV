@@ -1,0 +1,17 @@
+module px4_msgs {
+module msg {
+module dds_ {
+
+@topic
+struct TimesyncStatus_ {
+    unsigned long long timestamp;
+    octet source_protocol;
+    unsigned long long remote_timestamp;
+    long long observed_offset;
+    long long estimated_offset;
+    unsigned long round_trip_time;
+};
+
+}; // dds_
+}; // msg
+}; // px4_msgs

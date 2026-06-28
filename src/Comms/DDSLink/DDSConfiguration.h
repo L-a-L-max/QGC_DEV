@@ -21,6 +21,7 @@ class DDSConfiguration : public LinkConfiguration
     Q_PROPERTY(bool     autoDiscover     READ autoDiscover    WRITE setAutoDiscover    NOTIFY autoDiscoverChanged)
     Q_PROPERTY(QString  idlVersion       READ idlVersion      WRITE setIdlVersion      NOTIFY idlVersionChanged)
     Q_PROPERTY(bool     skydroidJoystick READ skydroidJoystick WRITE setSkydroidJoystick NOTIFY skydroidJoystickChanged)
+    Q_PROPERTY(QString  peerAddress      READ peerAddress     WRITE setPeerAddress     NOTIFY peerAddressChanged)
 
 public:
     explicit DDSConfiguration(const QString &name, QObject *parent = nullptr);
@@ -45,6 +46,9 @@ public:
     bool skydroidJoystick() const { return _skydroidJoystick; }
     void setSkydroidJoystick(bool enabled);
 
+    QString peerAddress() const { return _peerAddress; }
+    void setPeerAddress(const QString &addr);
+
     // LinkConfiguration overrides
     LinkType type() const override { return TypeDDS; }
     void copyFrom(const LinkConfiguration *source) override;
@@ -60,6 +64,7 @@ signals:
     void autoDiscoverChanged();
     void idlVersionChanged();
     void skydroidJoystickChanged();
+    void peerAddressChanged();
 
 private:
     int     _domainId        = 0;
@@ -68,6 +73,7 @@ private:
     bool    _autoDiscover    = true;
     QString _idlVersion;
     bool    _skydroidJoystick = false;
+    QString _peerAddress;
 };
 
 #endif // QGC_ENABLE_DDS

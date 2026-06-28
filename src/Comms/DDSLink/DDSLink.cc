@@ -258,23 +258,22 @@ dds_entity_t DDSLink::_createParticipant(int domainId)
 {
     // Only set config if not already configured by user
     if (qEnvironmentVariableIsEmpty("CYCLONEDDS_URI")) {
+        const DDSConfiguration *cfg = _ddsConfig();
+        const QString peerAddr = cfg ? cfg->peerAddress().trimmed() : QString();
+
         // Enumerate all physical network interfaces (skip loopback, docker, bridges)
-        // CycloneDDS by default picks ONE interface arbitrarily; if PX4 Agent is on
-        // a different subnet, SEDP unicast messages never reach it.
         QString interfacesXml;
         const auto allIfaces = QNetworkInterface::allInterfaces();
         for (const QNetworkInterface &iface : allIfaces) {
             if (!(iface.flags() & QNetworkInterface::IsUp)) continue;
             if (iface.flags() & QNetworkInterface::IsLoopBack) continue;
             const QString name = iface.name();
-            // Skip virtual/container interfaces
             if (name.startsWith(QStringLiteral("docker")) ||
                 name.startsWith(QStringLiteral("br-")) ||
                 name.startsWith(QStringLiteral("veth")) ||
                 name.startsWith(QStringLiteral("virbr"))) {
                 continue;
             }
-            // Must have at least one IPv4 address
             bool hasIpv4 = false;
             for (const QNetworkAddressEntry &entry : iface.addressEntries()) {
                 if (entry.ip().protocol() == QAbstractSocket::IPv4Protocol) {
@@ -287,9 +286,20 @@ dds_entity_t DDSLink::_createParticipant(int domainId)
             qInfo() << "[DDSLink] Using network interface:" << name;
         }
 
+        // Build peer locator XML for unicast discovery
+        QString peerXml;
+        if (!peerAddr.isEmpty()) {
+            const QStringList peers = peerAddr.split(QChar::fromLatin1(','), Qt::SkipEmptyParts);
+            peerXml = QStringLiteral("    <Discovery>\n      <Peers>\n");
+            for (const QString &p : peers) {
+                peerXml += QStringLiteral("        <Peer address=\"%1\"/>\n").arg(p.trimmed());
+            }
+            peerXml += QStringLiteral("      </Peers>\n    </Discovery>\n");
+            qInfo() << "[DDSLink] Unicast peer(s):" << peerAddr;
+        }
+
         QString config;
-        if (interfacesXml.isEmpty()) {
-            // Fallback: let CycloneDDS choose automatically
+        if (interfacesXml.isEmpty() && peerXml.isEmpty()) {
             config = QStringLiteral(
                 "<CycloneDDS>"
                 "  <Domain id=\"any\">"
@@ -304,23 +314,29 @@ dds_entity_t DDSLink::_createParticipant(int domainId)
                 "  </Domain>"
                 "</CycloneDDS>");
         } else {
+            QString generalXml;
+            if (!interfacesXml.isEmpty()) {
+                generalXml = QStringLiteral(
+                    "    <General>\n"
+                    "      <Interfaces>\n%1"
+                    "      </Interfaces>\n"
+                    "    </General>\n").arg(interfacesXml);
+            }
             config = QStringLiteral(
-                "<CycloneDDS>"
-                "  <Domain id=\"any\">"
-                "    <General>"
-                "      <Interfaces>\n%1"
-                "      </Interfaces>"
-                "    </General>"
-                "    <Compatibility>"
-                "      <StandardsConformance>lax</StandardsConformance>"
-                "    </Compatibility>"
-                "    <Tracing>"
-                "      <Category>discovery</Category>"
-                "      <OutputFile>stderr</OutputFile>"
-                "      <Verbosity>config</Verbosity>"
-                "    </Tracing>"
-                "  </Domain>"
-                "</CycloneDDS>").arg(interfacesXml);
+                "<CycloneDDS>\n"
+                "  <Domain id=\"any\">\n"
+                "%1"
+                "%2"
+                "    <Compatibility>\n"
+                "      <StandardsConformance>lax</StandardsConformance>\n"
+                "    </Compatibility>\n"
+                "    <Tracing>\n"
+                "      <Category>discovery</Category>\n"
+                "      <OutputFile>stderr</OutputFile>\n"
+                "      <Verbosity>config</Verbosity>\n"
+                "    </Tracing>\n"
+                "  </Domain>\n"
+                "</CycloneDDS>").arg(generalXml, peerXml);
         }
 
         qputenv("CYCLONEDDS_URI", config.toUtf8());

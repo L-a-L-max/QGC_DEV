@@ -12,11 +12,14 @@ ColumnLayout {
         // No need — properties are bound directly
     }
 
+    readonly property bool _configValid: subEditConfig !== null && subEditConfig !== undefined
+
     readonly property var _profileDefs: [
-        { label: "PX4 SITL v1.17",   mapping: "",           idl: "v1"        },
-        { label: "PX4 SITL v1.16",   mapping: "",           idl: "px4_v116"  },
-        { label: "CUAV X7+ (v1.16)", mapping: "cuav_x7pro", idl: "px4_v116"  },
-        { label: "Custom...",         mapping: "_custom",    idl: ""          }
+        { label: "PX4 v1.17 (Full)",   mapping: "",           idl: "v1"        },
+        { label: "PX4 SITL v1.17",     mapping: "",           idl: "v1"        },
+        { label: "PX4 SITL v1.16",     mapping: "",           idl: "px4_v116"  },
+        { label: "CUAV X7+ (v1.16)",   mapping: "cuav_x7pro", idl: "px4_v116"  },
+        { label: "Custom...",           mapping: "_custom",    idl: ""          }
     ]
 
     RowLayout {
@@ -25,11 +28,11 @@ ColumnLayout {
         QGCLabel { text: qsTr("Domain ID") }
         QGCTextField {
             id:                     domainField
-            text:                   subEditConfig.domainId.toString()
+            text:                   _configValid ? subEditConfig.domainId.toString() : "0"
             focus:                  true
             Layout.preferredWidth:  _secondColumnWidth
             inputMethodHints:       Qt.ImhFormattedNumbersOnly
-            onTextChanged:          subEditConfig.domainId = parseInt(domainField.text) || 0
+            onTextChanged:          { if (_configValid) subEditConfig.domainId = parseInt(domainField.text) || 0 }
         }
     }
 
@@ -47,6 +50,7 @@ ColumnLayout {
                 return labels
             }
             currentIndex: {
+                if (!_configValid) return 0
                 for (var i = 0; i < _profileDefs.length - 1; i++) {
                     if (_profileDefs[i].mapping === subEditConfig.vendorMapping &&
                         _profileDefs[i].idl === subEditConfig.idlVersion)
@@ -58,6 +62,7 @@ ColumnLayout {
                 return 0
             }
             onActivated: function(idx) {
+                if (!_configValid) return
                 var def = _profileDefs[idx]
                 if (def.mapping === "_custom") {
                     customField.visible = true
@@ -74,11 +79,11 @@ ColumnLayout {
         id:                     customField
         Layout.fillWidth:       true
         visible:                profileCombo.currentIndex === (_profileDefs.length - 1)
-        text:                   (subEditConfig.vendorMapping !== "" &&
+        text:                   (_configValid && subEditConfig.vendorMapping !== "" &&
                                  subEditConfig.vendorMapping !== "cuav_x7pro")
                                     ? subEditConfig.vendorMapping : ""
         placeholderText:        qsTr("JSON file name (without .json)")
-        onEditingFinished:      subEditConfig.vendorMapping = text
+        onEditingFinished:      { if (_configValid) subEditConfig.vendorMapping = text }
     }
 
     QGCLabel {
@@ -93,13 +98,37 @@ ColumnLayout {
     RowLayout {
         spacing: _colSpacing
 
+        QGCLabel { text: qsTr("Peer Address") }
+        QGCTextField {
+            id:                     peerField
+            text:                   _configValid ? (subEditConfig.peerAddress || "") : ""
+            Layout.preferredWidth:  _secondColumnWidth
+            placeholderText:        qsTr("e.g. 192.168.1.100")
+            onTextChanged:          { if (_configValid) subEditConfig.peerAddress = peerField.text }
+        }
+    }
+
+    QGCLabel {
+        Layout.fillWidth:       true
+        font.pointSize:         ScreenTools.smallFontPointSize
+        wrapMode:               Text.WordWrap
+        color:                  qgcPal.text
+        text:                   qsTr("IP address of the machine running PX4 DDS Agent. "
+                                     + "Required when multicast discovery does not work "
+                                     + "(e.g. across routers, Wi-Fi to Ethernet, Android). "
+                                     + "Separate multiple addresses with commas.")
+    }
+
+    RowLayout {
+        spacing: _colSpacing
+
         QGCLabel { text: qsTr("Namespace Prefix") }
         QGCTextField {
             id:                     nsField
-            text:                   subEditConfig.namespacePrefix
+            text:                   _configValid ? (subEditConfig.namespacePrefix || "") : ""
             Layout.preferredWidth:  _secondColumnWidth
             placeholderText:        qsTr("e.g. /drone1")
-            onTextChanged:          subEditConfig.namespacePrefix = nsField.text
+            onTextChanged:          { if (_configValid) subEditConfig.namespacePrefix = nsField.text }
         }
     }
 
@@ -108,8 +137,8 @@ ColumnLayout {
 
         QGCCheckBoxSlider {
             text:       qsTr("Auto-Discover Topics")
-            checked:    subEditConfig.autoDiscover
-            onClicked:  subEditConfig.autoDiscover = checked
+            checked:    _configValid ? subEditConfig.autoDiscover : false
+            onClicked:  { if (_configValid) subEditConfig.autoDiscover = checked }
         }
     }
 
@@ -118,15 +147,15 @@ ColumnLayout {
 
         QGCCheckBoxSlider {
             text:       qsTr("Skydroid Joystick (G16/G20)")
-            checked:    subEditConfig.skydroidJoystick
-            onClicked:  subEditConfig.skydroidJoystick = checked
+            checked:    _configValid ? subEditConfig.skydroidJoystick : false
+            onClicked:  { if (_configValid) subEditConfig.skydroidJoystick = checked }
         }
     }
 
     QGCLabel {
         Layout.preferredWidth:  _secondColumnWidth
         Layout.fillWidth:       true
-        visible:                subEditConfig.skydroidJoystick
+        visible:                _configValid && subEditConfig.skydroidJoystick
         font.pointSize:         ScreenTools.smallFontPointSize
         wrapMode:               Text.WordWrap
         color:                  qgcPal.text
@@ -144,8 +173,11 @@ ColumnLayout {
         text:                   qsTr("DDS link connects to PX4 flight controllers via CycloneDDS. "
                                      + "Select a profile matching your PX4 firmware version. "
                                      + "Domain ID must match the PX4 DDS domain (default 0).\n\n"
+                                     + "PX4 v1.17 (Full) — All 24 PX4 v1.17 output topics\n"
                                      + "PX4 SITL v1.17 — Software-in-the-loop simulation (latest)\n"
                                      + "PX4 SITL v1.16 — Software-in-the-loop simulation (v1.16)\n"
-                                     + "CUAV X7+ (v1.16) — CUAV X7+ Pro hardware with v1.16 firmware")
+                                     + "CUAV X7+ (v1.16) — CUAV X7+ Pro hardware with v1.16 firmware\n\n"
+                                     + "If topics show UNMATCHED, fill in the Peer Address field with the IP "
+                                     + "of the machine running the PX4 DDS Agent to enable unicast discovery.")
     }
 }

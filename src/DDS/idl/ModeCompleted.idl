@@ -1,0 +1,14 @@
+module px4_msgs {
+module msg {
+module dds_ {
+
+@topic
+struct ModeCompleted_ {
+    unsigned long long timestamp;
+    octet result;
+    octet nav_state;
+};
+
+}; // dds_
+}; // msg
+}; // px4_msgs

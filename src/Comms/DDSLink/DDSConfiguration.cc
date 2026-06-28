@@ -15,6 +15,7 @@ DDSConfiguration::DDSConfiguration(const DDSConfiguration *copy, QObject *parent
     , _autoDiscover(copy->_autoDiscover)
     , _idlVersion(copy->_idlVersion)
     , _skydroidJoystick(copy->_skydroidJoystick)
+    , _peerAddress(copy->_peerAddress)
 {
 }
 
@@ -68,6 +69,14 @@ void DDSConfiguration::setSkydroidJoystick(bool enabled)
     }
 }
 
+void DDSConfiguration::setPeerAddress(const QString &addr)
+{
+    if (_peerAddress != addr) {
+        _peerAddress = addr;
+        emit peerAddressChanged();
+    }
+}
+
 void DDSConfiguration::copyFrom(const LinkConfiguration *source)
 {
     LinkConfiguration::copyFrom(source);
@@ -79,6 +88,7 @@ void DDSConfiguration::copyFrom(const LinkConfiguration *source)
         setAutoDiscover(ddsSource->autoDiscover());
         setIdlVersion(ddsSource->idlVersion());
         setSkydroidJoystick(ddsSource->skydroidJoystick());
+        setPeerAddress(ddsSource->peerAddress());
     }
 }
 
@@ -91,6 +101,7 @@ void DDSConfiguration::loadSettings(QSettings &settings, const QString &root)
     setAutoDiscover(settings.value(QStringLiteral("autoDiscover"), true).toBool());
     setIdlVersion(settings.value(QStringLiteral("idlVersion")).toString());
     setSkydroidJoystick(settings.value(QStringLiteral("skydroidJoystick"), false).toBool());
+    setPeerAddress(settings.value(QStringLiteral("peerAddress")).toString());
     settings.endGroup();
 }
 
@@ -103,6 +114,7 @@ void DDSConfiguration::saveSettings(QSettings &settings, const QString &root) co
     settings.setValue(QStringLiteral("autoDiscover"), _autoDiscover);
     settings.setValue(QStringLiteral("idlVersion"), _idlVersion);
     settings.setValue(QStringLiteral("skydroidJoystick"), _skydroidJoystick);
+    settings.setValue(QStringLiteral("peerAddress"), _peerAddress);
     settings.endGroup();
 }
 

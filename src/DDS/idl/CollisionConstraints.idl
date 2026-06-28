@@ -1,0 +1,14 @@
+module px4_msgs {
+module msg {
+module dds_ {
+
+@topic
+struct CollisionConstraints_ {
+    unsigned long long timestamp;
+    float original_setpoint[2];
+    float adapted_setpoint[2];
+};
+
+}; // dds_
+}; // msg
+}; // px4_msgs

@@ -319,6 +319,78 @@
       "fact_group": "_internal",
       "description": "Command acknowledgement — handled by DDSDataInjector for command result feedback.",
       "fields": []
+    },
+    {
+      "dds_topic": "/fmu/out/vehicle_control_mode",
+      "dds_type": "px4_msgs::msg::dds_::VehicleControlMode_",
+      "fact_group": "_internal",
+      "description": "Vehicle control mode flags — handled by DDSDataInjector for armed/manual/auto mode display.",
+      "fields": []
+    },
+    {
+      "dds_topic": "/fmu/out/vehicle_odometry",
+      "dds_type": "px4_msgs::msg::dds_::VehicleOdometry_",
+      "fact_group": "vehicle",
+      "description": "Vehicle odometry (position + attitude from EKF2)",
+      "fields": [
+        {
+          "dds_field": "position[0]",
+          "fact_name": "odomX",
+          "description": "Odometry X position (m)"
+        },
+        {
+          "dds_field": "position[1]",
+          "fact_name": "odomY",
+          "description": "Odometry Y position (m)"
+        },
+        {
+          "dds_field": "position[2]",
+          "fact_name": "odomZ",
+          "description": "Odometry Z position (m)"
+        }
+      ]
+    },
+    {
+      "dds_topic": "/fmu/out/vtol_vehicle_status",
+      "dds_type": "px4_msgs::msg::dds_::VtolVehicleStatus_",
+      "fact_group": "_internal",
+      "description": "VTOL vehicle state — handled by DDSDataInjector for VTOL transition display.",
+      "fields": []
+    },
+    {
+      "dds_topic": "/fmu/out/transponder_report",
+      "dds_type": "px4_msgs::msg::dds_::TransponderReport_",
+      "fact_group": "_internal",
+      "description": "ADS-B transponder reports — handled by DDSDataInjector for traffic awareness.",
+      "fields": []
+    },
+    {
+      "dds_topic": "/fmu/out/gimbal_device_attitude_status",
+      "dds_type": "px4_msgs::msg::dds_::GimbalDeviceAttitudeStatus_",
+      "fact_group": "_internal",
+      "description": "Gimbal attitude status — quaternion and angular velocity.",
+      "fields": []
+    },
+    {
+      "dds_topic": "/fmu/out/timesync_status",
+      "dds_type": "px4_msgs::msg::dds_::TimesyncStatus_",
+      "fact_group": "_internal",
+      "description": "Time synchronization status between PX4 and companion computer.",
+      "fields": []
+    },
+    {
+      "dds_topic": "/fmu/out/collision_constraints",
+      "dds_type": "px4_msgs::msg::dds_::CollisionConstraints_",
+      "fact_group": "_internal",
+      "description": "Collision avoidance constraints — original vs adapted velocity setpoints.",
+      "fields": []
+    },
+    {
+      "dds_topic": "/fmu/out/mode_completed",
+      "dds_type": "px4_msgs::msg::dds_::ModeCompleted_",
+      "fact_group": "_internal",
+      "description": "Mode completion result — published when an active mode finishes.",
+      "fields": []
     }
   ]
 }

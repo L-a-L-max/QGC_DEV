@@ -25,6 +25,9 @@
 #include "ManualControlSetpoint.h"
 #include "VtolVehicleStatus.h"
 #include "TransponderReport.h"
+#include "TimesyncStatus.h"
+#include "CollisionConstraints.h"
+#include "ModeCompleted.h"
 
 // IDL-generated headers — v4 (from src/DDS/idl/v4/)
 #include "VehicleStatus_v4.h"
@@ -390,6 +393,41 @@ static QHash<QString, QVariant> extractTransponderReport(const void *sample)
     };
 }
 
+static QHash<QString, QVariant> extractTimesyncStatus(const void *sample)
+{
+    const auto *s = static_cast<const px4_msgs_msg_dds__TimesyncStatus_ *>(sample);
+    return {
+        {QStringLiteral("timestamp"),        QVariant::fromValue(s->timestamp)},
+        {QStringLiteral("source_protocol"),  QVariant(static_cast<int>(s->source_protocol))},
+        {QStringLiteral("remote_timestamp"), QVariant::fromValue(s->remote_timestamp)},
+        {QStringLiteral("observed_offset"),  QVariant::fromValue(s->observed_offset)},
+        {QStringLiteral("estimated_offset"), QVariant::fromValue(s->estimated_offset)},
+        {QStringLiteral("round_trip_time"),  QVariant(static_cast<quint32>(s->round_trip_time))},
+    };
+}
+
+static QHash<QString, QVariant> extractCollisionConstraints(const void *sample)
+{
+    const auto *s = static_cast<const px4_msgs_msg_dds__CollisionConstraints_ *>(sample);
+    return {
+        {QStringLiteral("timestamp"),           QVariant::fromValue(s->timestamp)},
+        {QStringLiteral("original_setpoint[0]"), QVariant(static_cast<double>(s->original_setpoint[0]))},
+        {QStringLiteral("original_setpoint[1]"), QVariant(static_cast<double>(s->original_setpoint[1]))},
+        {QStringLiteral("adapted_setpoint[0]"),  QVariant(static_cast<double>(s->adapted_setpoint[0]))},
+        {QStringLiteral("adapted_setpoint[1]"),  QVariant(static_cast<double>(s->adapted_setpoint[1]))},
+    };
+}
+
+static QHash<QString, QVariant> extractModeCompleted(const void *sample)
+{
+    const auto *s = static_cast<const px4_msgs_msg_dds__ModeCompleted_ *>(sample);
+    return {
+        {QStringLiteral("timestamp"), QVariant::fromValue(s->timestamp)},
+        {QStringLiteral("result"),    QVariant(static_cast<int>(s->result))},
+        {QStringLiteral("nav_state"), QVariant(static_cast<int>(s->nav_state))},
+    };
+}
+
 // ---------------------------------------------------------------------------
 // Field extractors — px4_v116 (CUAV X7+ / PX4 v1.16 firmware)
 // ---------------------------------------------------------------------------
@@ -511,6 +549,12 @@ void DDSTypeRegistry::_registerBuiltinTypes()
                     {&px4_msgs_msg_dds__VtolVehicleStatus__desc, extractVtolVehicleStatus});
     _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::TransponderReport_"), v1),
                     {&px4_msgs_msg_dds__TransponderReport__desc, extractTransponderReport});
+    _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::TimesyncStatus_"), v1),
+                    {&px4_msgs_msg_dds__TimesyncStatus__desc, extractTimesyncStatus});
+    _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::CollisionConstraints_"), v1),
+                    {&px4_msgs_msg_dds__CollisionConstraints__desc, extractCollisionConstraints});
+    _entries.insert(_key(QStringLiteral("px4_msgs::msg::dds_::ModeCompleted_"), v1),
+                    {&px4_msgs_msg_dds__ModeCompleted__desc, extractModeCompleted});
 
     // Register the same base types under "px4_v117" alias (v1.17 SITL uses the same base IDL)
     for (auto it = _entries.constBegin(); it != _entries.constEnd(); ++it) {
@@ -564,6 +608,9 @@ void DDSTypeRegistry::_registerV4Types()
         QStringLiteral("px4_msgs::msg::dds_::ManualControlSetpoint_"),
         QStringLiteral("px4_msgs::msg::dds_::VtolVehicleStatus_"),
         QStringLiteral("px4_msgs::msg::dds_::TransponderReport_"),
+        QStringLiteral("px4_msgs::msg::dds_::TimesyncStatus_"),
+        QStringLiteral("px4_msgs::msg::dds_::CollisionConstraints_"),
+        QStringLiteral("px4_msgs::msg::dds_::ModeCompleted_"),
     };
     const QString v1 = QStringLiteral("v1");
     for (const auto &typeName : baseTypes) {
