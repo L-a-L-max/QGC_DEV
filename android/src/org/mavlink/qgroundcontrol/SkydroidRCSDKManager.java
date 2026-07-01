@@ -99,9 +99,11 @@ public class SkydroidRCSDKManager {
             RCSDKManager.INSTANCE.initSDK(activity, sSdkCallback);
             RCSDKManager.INSTANCE.setMainThreadCallBack(true);
             RCSDKManager.INSTANCE.connectToRC();
-        } catch (Exception e) {
-            Log.e(TAG, "RCSDK initSDK exception", e);
-            sStatusText = "init exception: " + e.getMessage();
+        } catch (Throwable e) {
+            // Catch Throwable (not just Exception) because UnsatisfiedLinkError
+            // is an Error, thrown when native .so libs are missing on non-Skydroid devices.
+            Log.e(TAG, "RCSDK initSDK failed (non-fatal): " + e.getMessage());
+            sStatusText = "sdk unavailable";
             sInitialized = false;
         }
     }

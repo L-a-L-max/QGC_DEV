@@ -41,7 +41,11 @@ public class QGCActivity extends QtActivity {
 
         QGCUsbSerialManager.initialize(this);
         QGCSDLManager.initialize(this);
-        SkydroidRCSDKManager.initialize(this);
+        try {
+            SkydroidRCSDKManager.initialize(this);
+        } catch (Throwable e) {
+            Log.w(TAG, "Skydroid RCSDK unavailable (non-fatal): " + e.getMessage());
+        }
         m_storagePermissionController = new QGCStoragePermissionController(this);
     }
 
