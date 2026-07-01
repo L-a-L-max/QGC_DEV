@@ -29,6 +29,10 @@
 
 # Skydroid RCSDK
 -keep class com.skydroid.rcsdk.** { *; }
+# RCSDK optional dependencies (not included in build, suppress R8 errors)
+-dontwarn com.fishsemi.sdk.**
+-dontwarn com.skydroid.fpvplayer.**
+-dontwarn org.apache.commons.net.**
 
 # SDL - native method stubs required for JNI registration
 -keep class org.libsdl.app.** { *; }
