@@ -204,7 +204,10 @@ public class ZenohBridgeManager {
         final File configFile = new File(configDir, "bridge_config.json5");
 
         // Build JSON5 config for zenoh-bridge-dds v1.9+
-        // NOTE: "allow" must be a string or list of strings, NOT a map.
+        // Valid DDS plugin fields: scope, domain, allow, deny, max_frequencies,
+        // generalise_subs, generalise_pubs, forward_discovery,
+        // reliable_routes_blocking, localhost_only, queries_timeout,
+        // work_thread_num, max_block_thread_num
         String config = "{\n"
             + "  mode: \"client\",\n"
             + "  connect: {\n"
@@ -213,8 +216,7 @@ public class ZenohBridgeManager {
             + "  plugins: {\n"
             + "    dds: {\n"
             + "      domain: " + domainId + ",\n"
-            + "      allow: \".*\",\n"
-            + "      shm_enabled: false\n"
+            + "      allow: \".*\"\n"
             + "    }\n"
             + "  }\n"
             + "}\n";
