@@ -203,7 +203,8 @@ public class ZenohBridgeManager {
 
         final File configFile = new File(configDir, "bridge_config.json5");
 
-        // Build JSON5 config for zenoh-bridge-dds
+        // Build JSON5 config for zenoh-bridge-dds v1.9+
+        // NOTE: "allow" must be a string or list of strings, NOT a map.
         String config = "{\n"
             + "  mode: \"client\",\n"
             + "  connect: {\n"
@@ -212,9 +213,7 @@ public class ZenohBridgeManager {
             + "  plugins: {\n"
             + "    dds: {\n"
             + "      domain: " + domainId + ",\n"
-            + "      // Forward all topics by default\n"
-            + "      allow: { publishers: [\".*\"], subscribers: [\".*\"] },\n"
-            + "      // Use shared-memory for localhost DDS communication\n"
+            + "      allow: \".*\",\n"
             + "      shm_enabled: false\n"
             + "    }\n"
             + "  }\n"
