@@ -50,6 +50,7 @@ add_subdirectory(GPS)
 add_subdirectory(Utilities)
 # Must be added after Utilities — links QGCLogging/QGCFileSystem/QGCNetwork/QGCCompression.
 add_subdirectory(LogManager)
+add_subdirectory(G16Joystick)
 add_subdirectory(Joystick)
 add_subdirectory(MAVLink)
 add_subdirectory(MissionManager)

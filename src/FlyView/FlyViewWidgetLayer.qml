@@ -138,6 +138,17 @@ Item {
         }
     }
 
+    // G16 Remote Controller Toggle
+    G16JoystickToggle {
+        id:                     g16Toggle
+        anchors.right:          parent.right
+        anchors.rightMargin:    _toolsMargin
+        anchors.bottom:         virtualJoystickMultiTouch.visible ? virtualJoystickMultiTouch.top : parent.bottom
+        anchors.bottomMargin:   _toolsMargin
+        z:                      QGroundControl.zOrderWidgets
+        visible:                !QGroundControl.videoManager.fullScreen && Qt.platform.os === "android"
+    }
+
     FlyViewToolStrip {
         id:                     toolStrip
         anchors.left:           parent.left

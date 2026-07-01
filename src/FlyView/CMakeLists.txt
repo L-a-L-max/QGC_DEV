@@ -70,6 +70,7 @@ qt_add_qml_module(FlyViewModule
         VehicleWarnings.qml
         VirtualJoystick.qml
         VTOLChecklist.qml
+        ${CMAKE_SOURCE_DIR}/src/G16Joystick/G16JoystickToggle.qml
     NO_PLUGIN
 )
 
