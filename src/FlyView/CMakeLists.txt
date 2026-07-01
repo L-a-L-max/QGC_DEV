@@ -70,8 +70,16 @@ qt_add_qml_module(FlyViewModule
         VehicleWarnings.qml
         VirtualJoystick.qml
         VTOLChecklist.qml
-        ${CMAKE_SOURCE_DIR}/src/G16Joystick/G16JoystickToggle.qml
     NO_PLUGIN
+)
+
+# G16 Joystick Toggle (Android only) — added from G16Joystick subdirectory
+set_source_files_properties(
+    ${CMAKE_SOURCE_DIR}/src/G16Joystick/G16JoystickToggle.qml
+    PROPERTIES QT_RESOURCE_ALIAS "G16JoystickToggle.qml"
+)
+qt_target_qml_sources(FlyViewModule
+    FILES ${CMAKE_SOURCE_DIR}/src/G16Joystick/G16JoystickToggle.qml
 )
 
 qt_add_resources(FlyViewModule flyview_resources
