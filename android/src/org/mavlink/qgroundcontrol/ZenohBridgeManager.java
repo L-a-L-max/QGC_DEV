@@ -209,7 +209,7 @@ public class ZenohBridgeManager {
         // reliable_routes_blocking, localhost_only, queries_timeout,
         // work_thread_num, max_block_thread_num
         String config = "{\n"
-            + "  mode: \"client\",\n"
+            + "  mode: \"peer\",\n"
             + "  connect: {\n"
             + "    endpoints: [\"" + endpoint + "\"],\n"
             + "    exit_on_failure: false,\n"
