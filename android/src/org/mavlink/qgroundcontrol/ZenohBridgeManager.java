@@ -66,7 +66,7 @@ public class ZenohBridgeManager {
                 "-c", configFile.getAbsolutePath()
             );
 
-            pb.environment().put("RUST_LOG", "zenoh=info,zenoh_plugin_dds=info");
+            pb.environment().put("RUST_LOG", "zenoh=info,zenoh::net::routing::dispatcher::pubsub=off,zenoh_plugin_dds=info");
             pb.redirectErrorStream(false);
 
             Log.i(TAG, "Starting bridge: " + binary.getAbsolutePath()
