@@ -219,6 +219,7 @@ public class ZenohBridgeManager {
             + "      period_increase_factor: 2.0\n"
             + "    }\n"
             + "  },\n"
+            + "  timestamping: { enabled: false },\n"
             + "  plugins: {\n"
             + "    dds: {\n"
             + "      domain: " + domainId + ",\n"
