@@ -223,6 +223,7 @@ public class ZenohBridgeManager {
             + "    dds: {\n"
             + "      domain: " + domainId + ",\n"
             + "      allow: \".*\",\n"
+            + "      localhost_only: true,\n"
             + "      forward_discovery: true\n"
             + "    }\n"
             + "  }\n"
