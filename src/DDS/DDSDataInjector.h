@@ -105,7 +105,12 @@ private:
     double _lastLat = 0.0;
     double _lastLon = 0.0;
     double _lastAlt = 0.0;
+    double _homeAltMSL = qQNaN();
+    bool   _homeAltValid = false;
     DDSMissionManager *_missionManager = nullptr;
+
+    void _updateDerivedAltitude();
+    void _updateTimeToHome();
 };
 
 #endif // QGC_ENABLE_DDS

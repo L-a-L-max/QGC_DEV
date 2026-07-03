@@ -117,7 +117,7 @@
           "fact_group": "vehicle",
           "fact_name": "altitudeRelative",
           "transform": "negate",
-          "description": "Relative altitude from local z (NED down → positive up)"
+          "description": "Fallback relative altitude from local z; overridden by DDSDataInjector with (AMSL - home) when home is available"
         }
       ]
     },

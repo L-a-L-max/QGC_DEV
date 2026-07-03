@@ -14,7 +14,10 @@
 #include "px4_custom_mode.h"
 
 #include <QtCore/QDebug>
+#include <QtCore/QtMath>
 #include <QtPositioning/QGeoCoordinate>
+
+#include "VehicleFactGroup.h"
 
 DDSDataInjector::DDSDataInjector(DDSMappingEngine *engine,
                                  DDSTransformRegistry *transforms,
@@ -228,6 +231,8 @@ void DDSDataInjector::_updateVehicleCoordinate(const QHash<QString, QVariant> &f
         if (_missionManager) {
             _missionManager->updateVehiclePosition(lat, lon, alt);
         }
+        _updateDerivedAltitude();
+        _updateTimeToHome();
     }
 }
 
@@ -270,6 +275,8 @@ void DDSDataInjector::_updateVehicleState(const QHash<QString, QVariant> &fields
                 // Fallback: use current global position as home when home_position topic is unavailable
                 if (!_homeSetFromArm && _lastLat != 0.0 && _lastLon != 0.0) {
                     _homeSetFromArm = true;
+                    _homeAltMSL = _lastAlt;
+                    _homeAltValid = true;
                     QGeoCoordinate homeCoord(_lastLat, _lastLon, _lastAlt);
                     _vehicle->_setHomePosition(homeCoord);
                     if (_missionManager) {
@@ -330,10 +337,13 @@ void DDSDataInjector::_updateHomePosition(const QHash<QString, QVariant> &fields
 
     QGeoCoordinate homeCoord(lat, lon, alt);
     if (homeCoord.isValid()) {
+        _homeAltMSL = alt;
+        _homeAltValid = true;
         _vehicle->_setHomePosition(homeCoord);
         if (_missionManager) {
             _missionManager->updateHomePosition(lat, lon, alt);
         }
+        _updateDerivedAltitude();
     }
 }
 
@@ -381,6 +391,47 @@ void DDSDataInjector::_handleCommandAck(const QHash<QString, QVariant> &fields)
             << "result=" << result << "target=" << targetSystem;
 
     emit commandAckReceived(command, result, targetSystem);
+}
+
+void DDSDataInjector::_updateDerivedAltitude()
+{
+    if (!_homeAltValid || _lastAlt == 0.0) {
+        return;
+    }
+
+    const double relAlt = _lastAlt - _homeAltMSL;
+
+    FactGroup *vfg = _vehicle->vehicleFactGroup();
+    if (!vfg) {
+        return;
+    }
+    Fact *altRelFact = vfg->getFact(QStringLiteral("altitudeRelative"));
+    if (altRelFact) {
+        altRelFact->setRawValue(relAlt);
+    }
+}
+
+void DDSDataInjector::_updateTimeToHome()
+{
+    FactGroup *vfg = _vehicle->vehicleFactGroup();
+    if (!vfg) {
+        return;
+    }
+
+    Fact *distFact = vfg->getFact(QStringLiteral("distanceToHome"));
+    Fact *gsFact   = vfg->getFact(QStringLiteral("groundSpeed"));
+    Fact *tthFact  = vfg->getFact(QStringLiteral("timeToHome"));
+    if (!distFact || !gsFact || !tthFact) {
+        return;
+    }
+
+    const double dist = distFact->rawValue().toDouble();
+    const double gs   = gsFact->rawValue().toDouble();
+    if (qIsNaN(dist) || qIsNaN(gs) || gs < 0.1) {
+        return;
+    }
+
+    tthFact->setRawValue(dist / gs);
 }
 
 void DDSDataInjector::_ensureBatteryExists()
