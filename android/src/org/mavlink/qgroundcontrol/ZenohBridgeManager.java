@@ -21,7 +21,8 @@ import java.io.OutputStream;
  */
 public class ZenohBridgeManager {
     private static final String TAG = "ZenohBridge";
-    private static final String BINARY_ASSET = "zenoh-bridge-dds";
+    private static final String NATIVE_LIB_NAME = "libzenoh_bridge_dds.so";
+    private static final String LEGACY_ASSET_NAME = "zenoh-bridge-dds";
     private static final int STARTUP_WAIT_MS = 2000;
 
     private static volatile Process sBridgeProcess = null;
@@ -48,9 +49,9 @@ public class ZenohBridgeManager {
 
         sLastError = "";
 
-        final File binary = extractBinary(context);
+        final File binary = findBinary(context);
         if (binary == null) {
-            sStatusText = "binary extraction failed";
+            sStatusText = "binary not found";
             return false;
         }
 
@@ -147,10 +148,35 @@ public class ZenohBridgeManager {
     }
 
     /**
-     * Extract the bridge binary from APK assets to app-internal storage.
-     * Returns the executable File, or null on failure.
+     * Locate the bridge binary. Prefers the native library directory
+     * (jniLibs), which Android grants execute permission by default.
+     * Falls back to extracting from APK assets for legacy builds.
      */
-    private static File extractBinary(Context context) {
+    private static File findBinary(Context context) {
+        // Primary: look in nativeLibraryDir (android/libs/arm64-v8a/libzenoh_bridge_dds.so)
+        // SELinux always allows execution from this directory.
+        String nativeLibDir = context.getApplicationInfo().nativeLibraryDir;
+        File nativeLib = new File(nativeLibDir, NATIVE_LIB_NAME);
+        if (nativeLib.exists() && nativeLib.canExecute()) {
+            Log.i(TAG, "Using native library: " + nativeLib.getAbsolutePath());
+            return nativeLib;
+        }
+        if (nativeLib.exists()) {
+            Log.w(TAG, "Native lib exists but not executable: " + nativeLib.getAbsolutePath());
+        }
+
+        // Fallback: extract from assets (legacy approach, may fail on Android 10+
+        // due to SELinux W^X policy on app data directories)
+        Log.w(TAG, "Native lib not found in " + nativeLibDir
+                + ", falling back to asset extraction");
+        return extractFromAssets(context);
+    }
+
+    /**
+     * Legacy extraction from APK assets to app-internal storage.
+     * May fail on Android 10+ devices with strict SELinux W^X policy.
+     */
+    private static File extractFromAssets(Context context) {
         final File binDir = new File(context.getFilesDir(), "zenoh");
         if (!binDir.exists() && !binDir.mkdirs()) {
             Log.e(TAG, "Cannot create directory: " + binDir);
@@ -158,15 +184,14 @@ public class ZenohBridgeManager {
             return null;
         }
 
-        final File binary = new File(binDir, BINARY_ASSET);
+        final File binary = new File(binDir, LEGACY_ASSET_NAME);
 
-        // Skip extraction if binary already exists and is executable
         if (binary.exists() && binary.canExecute()) {
             Log.i(TAG, "Binary already extracted: " + binary.getAbsolutePath());
             return binary;
         }
 
-        try (InputStream is = context.getAssets().open(BINARY_ASSET);
+        try (InputStream is = context.getAssets().open(LEGACY_ASSET_NAME);
              OutputStream os = new FileOutputStream(binary)) {
             byte[] buf = new byte[65536];
             int n;
@@ -181,8 +206,12 @@ public class ZenohBridgeManager {
         }
 
         if (!binary.setExecutable(true, false)) {
-            Log.e(TAG, "Cannot set execute permission on: " + binary);
-            sLastError = "Cannot set execute permission";
+            Log.e(TAG, "Cannot set execute permission on: " + binary
+                    + ". Device may enforce SELinux W^X policy."
+                    + " Place the binary as " + NATIVE_LIB_NAME
+                    + " in android/libs/arm64-v8a/ instead.");
+            sLastError = "Permission denied: place binary as " + NATIVE_LIB_NAME
+                    + " in android/libs/arm64-v8a/";
             return null;
         }
 

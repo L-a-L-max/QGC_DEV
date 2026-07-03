@@ -131,8 +131,12 @@ android {
     buildToolsVersion androidBuildToolsVersion
     ndkVersion = androidNdkVersion
 
-    // Extract native libraries from the APK
-    // packagingOptions.jniLibs.useLegacyPackaging = true
+    // Extract native libraries from the APK so that executables (e.g.
+    // zenoh-bridge-dds) placed in jniLibs are available on disk with
+    // execute permission.  Without this, Android may keep .so files
+    // compressed inside the APK and only memory-map them for dlopen(),
+    // which prevents Process execution.
+    packagingOptions.jniLibs.useLegacyPackaging = true
 
     sourceSets {
         main {
