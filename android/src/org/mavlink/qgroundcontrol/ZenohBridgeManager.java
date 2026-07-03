@@ -208,6 +208,16 @@ public class ZenohBridgeManager {
         // generalise_subs, generalise_pubs, forward_discovery,
         // reliable_routes_blocking, localhost_only, queries_timeout,
         // work_thread_num, max_block_thread_num
+
+        // Only bridge topics that QGC actually uses (from dds_mappings).
+        // Out: 15 topics QGC subscribes to; In: 4 topics QGC publishes.
+        String allowPattern = "rt/fmu/(out/(vehicle_attitude|vehicle_global_position"
+            + "|vehicle_local_position_v1|vehicle_gps_position|battery_status_v1"
+            + "|wind|airspeed_validated_v1|sensor_combined|manual_control_setpoint"
+            + "|estimator_status_flags|vehicle_status_v1|home_position_v1"
+            + "|vehicle_land_detected|failsafe_flags|vehicle_command_ack)"
+            + "|in/(vehicle_command|telemetry_status|manual_control_input|goto_setpoint))";
+
         String config = "{\n"
             + "  mode: \"peer\",\n"
             + "  connect: {\n"
@@ -223,7 +233,7 @@ public class ZenohBridgeManager {
             + "  plugins: {\n"
             + "    dds: {\n"
             + "      domain: " + domainId + ",\n"
-            + "      allow: \".*\",\n"
+            + "      allow: \"" + allowPattern + "\",\n"
             + "      localhost_only: true,\n"
             + "      forward_discovery: true\n"
             + "    }\n"
