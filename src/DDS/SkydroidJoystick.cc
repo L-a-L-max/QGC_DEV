@@ -62,6 +62,10 @@ void SkydroidJoystick::setChannelRange(int minVal, int maxVal, int centerVal)
 
 float SkydroidJoystick::_normalizeChannel(int rawValue, bool isCentered) const
 {
+    // Clamp raw value to valid range; out-of-range values (e.g. 0 when
+    // the controller is disconnected) would produce extreme outputs.
+    rawValue = qBound(_minVal, rawValue, _maxVal);
+
     if (isCentered) {
         // Map [min..center..max] → [-1..0..+1]
         if (rawValue <= _centerVal) {
@@ -101,7 +105,15 @@ void SkydroidJoystick::_poll()
         }
     }
 
-    if (!_rcConnected) return;
+    if (!_rcConnected) {
+        // RC disconnected: send center/hover values so PX4 does not
+        // trigger RC-loss failsafe (RTL).  throttle=0.5 maps to PX4
+        // throttle=0 (hover for multirotor).
+        if (_manualControlPub && _manualControlPub->isReady()) {
+            _manualControlPub->sendManualControl(0.0f, 0.0f, 0.0f, 0.5f);
+        }
+        return;
+    }
 
     // Read channel values text for display
     QJniObject chTextObj = QJniObject::callStaticObjectMethod(kJavaClass, "getChannelsText", "()Ljava/lang/String;");
@@ -125,19 +137,8 @@ void SkydroidJoystick::_poll()
     const float yaw    = _normalizeChannel(yawRaw,      true);
     const float thrust = _normalizeChannel(throttleRaw, false);
 
-    // Suppress sending when all sticks are at center (idle) to avoid
-    // interfering with auto/mission flight modes on PX4
-    static constexpr float kIdleDeadzone = 0.05f;
-    const bool sticksIdle = (fabsf(roll) < kIdleDeadzone &&
-                             fabsf(pitch) < kIdleDeadzone &&
-                             fabsf(yaw) < kIdleDeadzone &&
-                             fabsf(thrust - 0.5f) < kIdleDeadzone);
-    if (sticksIdle) {
-        // Don't send manual_control when sticks are centered
-        return;
-    }
-
-    // Send via DDS
+    // Send via DDS (including center/idle values so PX4 keeps
+    // receiving heartbeats and does not trigger RC-loss → RTL)
     if (_manualControlPub && _manualControlPub->isReady()) {
         _manualControlPub->sendManualControl(roll, pitch, yaw, thrust);
     }

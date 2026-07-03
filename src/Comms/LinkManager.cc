@@ -28,6 +28,10 @@
 #endif
 #ifdef QGC_ENABLE_DDS
 #include "DDSLink.h"
+#include "DDSConfiguration.h"
+#endif
+#ifdef QGC_ENABLE_ZENOH
+#include "ZenohLink.h"
 #endif
 
 #include <QtCore/QApplicationStatic>
@@ -123,6 +127,11 @@ bool LinkManager::createConnectedLink(SharedLinkConfigurationPtr &config)
 #ifdef QGC_ENABLE_DDS
     case LinkConfiguration::TypeDDS:
         link = std::make_shared<DDSLink>(config);
+        break;
+#endif
+#ifdef QGC_ENABLE_ZENOH
+    case LinkConfiguration::TypeZenoh:
+        link = std::make_shared<ZenohLink>(config);
         break;
 #endif
     case LinkConfiguration::TypeLast:
@@ -365,6 +374,11 @@ void LinkManager::loadLinkConfigurationList()
                 link = new MockConfiguration(name);
                 break;
 #endif
+#ifdef QGC_ENABLE_DDS
+            case LinkConfiguration::TypeDDS:
+                link = new DDSConfiguration(name);
+                break;
+#endif
             case LinkConfiguration::TypeLast:
             default:
                 break;
@@ -495,6 +509,9 @@ QStringList LinkManager::linkTypeStrings() const
     list += tr("Log Replay");
 #ifdef QGC_ENABLE_DDS
     list += tr("DDS");
+#endif
+#ifdef QGC_ENABLE_ZENOH
+    list += tr("Zenoh");
 #endif
 
     if (list.size() != static_cast<int>(LinkConfiguration::TypeLast)) {
