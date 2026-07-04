@@ -398,6 +398,21 @@ Rectangle {
 
             property var _appSettings: QGroundControl.settingsManager.appSettings
 
+            QGCLabel { text: qsTr("DDS Priority") }
+            QGCComboBox {
+                id:                 dataSourceCombo
+                Layout.fillWidth:   true
+                model:              parent._appSettings.ddsDataSource.enumStrings
+                currentIndex:       parent._appSettings.ddsDataSource.enumIndex
+                onActivated: function(index) {
+                    parent._appSettings.ddsDataSource.value = parent._appSettings.ddsDataSource.enumValues[index]
+                }
+            }
+            QGCLabel {
+                text: "data_source=" + parent._appSettings.ddsDataSource.rawValue
+                Layout.minimumWidth: ScreenTools.defaultFontPixelWidth * 6
+            }
+
             QGCLabel { text: qsTr("Max Speed") }
             Slider {
                 id:                 maxSpeedSlider

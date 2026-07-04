@@ -34,6 +34,7 @@ public:
     DEFINE_SETTINGFACT(virtualJoystickMaxSpeed)
     DEFINE_SETTINGFACT(virtualJoystickDeadzone)
     DEFINE_SETTINGFACT(virtualJoystickExpo)
+    DEFINE_SETTINGFACT(ddsDataSource)
     DEFINE_SETTINGFACT(uiScalePercent)
     DEFINE_SETTINGFACT(indoorPalette)
     DEFINE_SETTINGFACT(savePath)

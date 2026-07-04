@@ -114,7 +114,7 @@ bool DDSManualControlPublisher::sendManualControl(float roll, float pitch,
     msg.timestamp        = 0;
     msg.timestamp_sample = 0;
     msg.valid       = true;
-    msg.data_source = 2;  // SOURCE_MAVLINK_0
+    msg.data_source = static_cast<uint8_t>(settings->ddsDataSource()->rawValue().toUInt());
 
     // QGC: thrust [0,1] (center=0.5).  PX4: throttle [-1,1] (center=0).
     const float throttle = (thrust * 2.0f) - 1.0f;
@@ -135,6 +135,7 @@ bool DDSManualControlPublisher::sendManualControl(float roll, float pitch,
         qWarning() << "[DDSManualControl] send: r=" << roll
                    << "p=" << pitch << "y=" << yaw
                    << "t(raw)=" << thrust << "t(mapped)=" << throttle
+                   << "src=" << msg.data_source
                    << "spd=" << maxSpeed << "dz=" << deadzone << "expo=" << expo
                    << "rc=" << rc << "matched=" << nMatched;
     }

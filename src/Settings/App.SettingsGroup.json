@@ -207,6 +207,17 @@
             "keywords": "joystick,expo,sensitivity"
         },
         {
+            "name": "ddsDataSource",
+            "shortDesc": "DDS manual control data_source identifier for PX4 priority.",
+            "longDesc": "Sets the data_source field in manual_control_input sent via DDS. PX4 uses this to identify the input source and apply COM_RC_IN_MODE priority. RC=1, MAVLINK_0(M1)=2, MAVLINK_1(M2)=3, MAVLINK_2=4, MAVLINK_3=5. Use a different value from the MAVLink GCS to enable dual-controller priority.",
+            "type": "uint8",
+            "enumStrings": "RC (1),MAVLINK_0 / M1 (2),MAVLINK_1 / M2 (3),MAVLINK_2 (4),MAVLINK_3 (5)",
+            "enumValues": "1,2,3,4,5",
+            "default": 3,
+            "label": "DDS Priority (data_source)",
+            "keywords": "dds,priority,data_source,manual_control"
+        },
+        {
             "name": "gstDebugLevel",
             "shortDesc": "Sets the verbosity of GStreamer debug logging.",
             "longDesc": "Controls the GStreamer debug threshold for all pipeline elements. Changes take effect immediately.",
