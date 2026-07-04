@@ -80,6 +80,9 @@ bin/mac
 *.dylib
 *.dll
 
+# Allow Android JNI native libraries (Skydroid RCSDK, zenoh-bridge-dds, etc.)
+!android/libs/arm64-v8a/*.so
+
 # Build tool artifacts
 *.ninja
 .ninja_log
