@@ -3143,6 +3143,15 @@ void Vehicle::sendJoystickDataThreadSafe(float roll, float pitch, float yaw, flo
         outgoingExtensionValues[7]
     );
     sendMessageOnLinkThreadSafe(sharedLink.get(), message);
+
+#ifdef QGC_ENABLE_DDS
+    // Additionally send via DDS when the publisher is ready.
+    // Values are already calibrated/curved by the Joystick system, so use
+    // sendManualControlDirect which skips the virtual-joystick curve logic.
+    if (_ddsManualControlPublisher && _ddsManualControlPublisher->isReady()) {
+        _ddsManualControlPublisher->sendManualControlDirect(roll, pitch, yaw, thrust);
+    }
+#endif
 }
 
 // Sends RC_CHANNELS_OVERRIDE for joystick aux axes mapped to RC channels 5–10 only.

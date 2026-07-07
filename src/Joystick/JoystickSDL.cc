@@ -249,42 +249,12 @@ QMap<QString, Joystick*> JoystickSDL::discover()
             name = QStringLiteral("%1 #%2").arg(baseName).arg(duplicateIndex++);
         }
 
-        QList<int> gamepadAxes;
-        QSet<int> joyAxesMappedToGamepad;
-
-        if (SDL_IsGamepad(jid)) {
-            auto tmpGamepad = SDL_OpenGamepad(jid);
-            if (!tmpGamepad) {
-                qCWarning(JoystickSDLLog) << "Failed to open gamepad" << jid << SDL_GetError();
-                continue;
-            }
-
-            // Determine if this gamepad axis is one we should show to the user
-            for (int i = 0; i < SDL_GAMEPAD_AXIS_COUNT; i++) {
-                if (SDL_GamepadHasAxis(tmpGamepad, static_cast<SDL_GamepadAxis>(i))) {
-                    gamepadAxes.append(i);
-                }
-            }
-
-            // If a sdlJoystick axis is mapped to a sdlGamepad axis, then the axis is represented
-            // by both the sdlJoystick interface and the sdlGamepad interface. If this is the case,
-            // We'll only show the sdlGamepad interface version of the axis to the user.
-            int bindingCount = 0;
-            SDL_GamepadBinding **bindings = SDL_GetGamepadBindings(tmpGamepad, &bindingCount);
-            if (bindings) {
-                for (int i = 0; i < bindingCount; ++i) {
-                    SDL_GamepadBinding *binding = bindings[i];
-                    if (binding && binding->input_type == SDL_GAMEPAD_BINDTYPE_AXIS && binding->output_type == SDL_GAMEPAD_BINDTYPE_AXIS) {
-                        joyAxesMappedToGamepad.insert(binding->input.axis.axis);
-                    }
-                }
-                SDL_free(bindings);
-            } else {
-                qCWarning(JoystickSDLLog) << "Failed to get bindings for" << name << "error:" << SDL_GetError();
-            }
-
-            SDL_CloseGamepad(tmpGamepad);
-        }
+        // Always use raw joystick axes for axis enumeration and reading.
+        // SDL3's gamepad remapping layer can have incorrect mappings for
+        // non-mainstream controllers (e.g. SILIC RQ10), causing axis order
+        // errors.  Using raw joystick axes matches official QGC behavior
+        // and ensures calibration works correctly for all devices.
+        QList<int> gamepadAxes;  // intentionally empty — axis values read via raw joystick API
 
         SDL_Joystick *tmpJoy = SDL_OpenJoystick(jid);
         if (!tmpJoy) {
@@ -295,9 +265,7 @@ QMap<QString, Joystick*> JoystickSDL::discover()
         QList<int> nonGamepadAxes;
         const int axisCount = SDL_GetNumJoystickAxes(tmpJoy);
         for (int i = 0; i < axisCount; i++) {
-            if (!joyAxesMappedToGamepad.contains(i)) {
-                nonGamepadAxes.append(i);
-            }
+            nonGamepadAxes.append(i);
         }
 
         const int buttonCount = SDL_GetNumJoystickButtons(tmpJoy);
@@ -459,18 +427,12 @@ int JoystickSDL::_getAxisValue(int idx) const
     }
 #endif
 
-    if (_sdlGamepad) {
-        if (idx < _gamepadAxes.length()) {
-            return SDL_GetGamepadAxis(_sdlGamepad, static_cast<SDL_GamepadAxis>(_gamepadAxes[idx]));
-        }
-        const int nonGamepadIdx = idx - static_cast<int>(_gamepadAxes.length());
-        if (nonGamepadIdx < _nonGamepadAxes.length()) {
-            return SDL_GetJoystickAxis(_sdlJoystick, _nonGamepadAxes[nonGamepadIdx]);
-        }
-        return 0;
+    // Always read raw joystick axis values (bypass SDL3 gamepad remapping
+    // which can have incorrect mappings for non-mainstream controllers).
+    if (_sdlJoystick) {
+        return SDL_GetJoystickAxis(_sdlJoystick, idx);
     }
-
-    return SDL_GetJoystickAxis(_sdlJoystick, idx);
+    return 0;
 }
 
 bool JoystickSDL::_getHat(int hat, int idx) const

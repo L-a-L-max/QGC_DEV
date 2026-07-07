@@ -29,6 +29,12 @@ public:
     /// Deadzone, expo, and speed scaling from settings are applied internally.
     bool sendManualControl(float roll, float pitch, float yaw, float thrust);
 
+    /// Send pre-processed manual control values to PX4 without applying
+    /// deadzone/expo/speed-scale (for use by the standard SDL joystick system
+    /// which already applies its own calibration and curves).
+    /// roll/pitch/yaw: [-1, 1].  thrust: [0, 1].
+    bool sendManualControlDirect(float roll, float pitch, float yaw, float thrust);
+
 private:
     static float _applyJoystickCurve(float input, float deadzone, float expo);
 

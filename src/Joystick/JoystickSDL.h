@@ -31,7 +31,7 @@ public:
     // Instance management
     int instanceId() const { return _instanceId; }
     void setInstanceId(int instanceId) { _instanceId = instanceId; }
-    bool requiresCalibration() const override { return !isGamepad(); }
+    bool requiresCalibration() const override { return true; }
 
     // Haptic and LED
     bool hasRumble() const override;

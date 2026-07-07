@@ -143,4 +143,48 @@ bool DDSManualControlPublisher::sendManualControl(float roll, float pitch,
     return rc == DDS_RETCODE_OK;
 }
 
+bool DDSManualControlPublisher::sendManualControlDirect(float roll, float pitch,
+                                                        float yaw, float thrust)
+{
+    if (_writer <= 0) {
+        qCWarning(DDSManualControlLog) << "sendManualControlDirect called but writer not ready";
+        return false;
+    }
+
+    auto *settings = SettingsManager::instance()->appSettings();
+
+    px4_msgs_msg_dds__ManualControlSetpoint_ msg;
+    memset(&msg, 0, sizeof(msg));
+
+    msg.timestamp        = 0;
+    msg.timestamp_sample = 0;
+    msg.valid       = true;
+    msg.data_source = static_cast<uint8_t>(settings->ddsDataSource()->rawValue().toUInt());
+
+    // QGC: thrust [0,1] (center=0.5).  PX4: throttle [-1,1] (center=0).
+    const float throttle = (thrust * 2.0f) - 1.0f;
+
+    msg.roll     = roll;
+    msg.pitch    = pitch;
+    msg.yaw      = yaw;
+    msg.throttle = throttle;
+
+    msg.sticks_moving = (fabsf(roll)  > 0.01f || fabsf(pitch) > 0.01f ||
+                         fabsf(yaw)   > 0.01f || fabsf(throttle) > 0.05f);
+
+    const dds_return_t rc = dds_write(_writer, &msg);
+
+    if (_sendCount++ % 25 == 0) {
+        dds_instance_handle_t ihs[16];
+        const dds_return_t nMatched = dds_get_matched_subscriptions(_writer, ihs, 16);
+        qWarning() << "[DDSManualControl] direct: r=" << roll
+                   << "p=" << pitch << "y=" << yaw
+                   << "t(raw)=" << thrust << "t(mapped)=" << throttle
+                   << "src=" << msg.data_source
+                   << "rc=" << rc << "matched=" << nMatched;
+    }
+
+    return rc == DDS_RETCODE_OK;
+}
+
 #endif // QGC_ENABLE_DDS
