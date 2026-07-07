@@ -518,5 +518,8 @@ private:
     static constexpr const char *_buttonActionLandingGearRetract=  QT_TR_NOOP("Landing gear retract");
     static constexpr const char *_buttonActionMotorInterlockEnable=   QT_TR_NOOP("Motor Interlock enable");
     static constexpr const char *_buttonActionMotorInterlockDisable=  QT_TR_NOOP("Motor Interlock disable");
+#ifdef QGC_ENABLE_DDS
+    static constexpr const char *_buttonActionDdsRelease =            QT_TR_NOOP("DDS Release");
+#endif
 
 };

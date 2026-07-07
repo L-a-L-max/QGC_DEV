@@ -1787,6 +1787,13 @@ void Joystick::_buildAvailableButtonsActionList(Vehicle *vehicle)
     _availableButtonActions->append(new AvailableButtonAction(_buttonActionMotorInterlockDisable,
         [this]() { emit motorInterlock(false); }));
 #endif
+#ifdef QGC_ENABLE_DDS
+    // DDS Release: button down → stop DDS sending (release control to lower-priority source)
+    //              button up   → resume DDS sending (reclaim control)
+    _availableButtonActions->append(new AvailableButtonAction(_buttonActionDdsRelease,
+        []() { SettingsManager::instance()->appSettings()->ddsUsbJoystickEnabled()->setRawValue(false); },
+        []() { SettingsManager::instance()->appSettings()->ddsUsbJoystickEnabled()->setRawValue(true); }));
+#endif
 
     const auto customActions = QGCCorePlugin::instance()->joystickActions();
     for (const auto &action : customActions) {
