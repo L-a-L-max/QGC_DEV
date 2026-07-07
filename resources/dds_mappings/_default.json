@@ -111,13 +111,6 @@
           "fact_name": "climbRate",
           "transform": "negate",
           "description": "Climb rate: NED vz negated → positive up (m/s)"
-        },
-        {
-          "dds_field": "z",
-          "fact_group": "vehicle",
-          "fact_name": "altitudeRelative",
-          "transform": "negate",
-          "description": "Fallback relative altitude from local z; overridden by DDSDataInjector with (AMSL - home) when home is available"
         }
       ]
     },

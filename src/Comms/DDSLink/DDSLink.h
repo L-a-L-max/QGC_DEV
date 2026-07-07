@@ -86,8 +86,13 @@ private:
     ZenohBridge                      _zenohBridge;
 
     QTimer               _pollTimer;
+    QTimer               _timeoutTimer;   ///< watchdog for data reception timeout
     dds_entity_t         _participant = DDS_ENTITY_NIL;
     bool                 _connected   = false;
+    qint64               _lastDataReceivedMs = 0; ///< timestamp of last DDS sample
+    bool                 _timeoutNotified = false; ///< prevent repeated timeout signals
+
+    static constexpr int kDataTimeoutMs = 3500; ///< disconnect after this many ms without data
 
     struct ReaderInfo {
         dds_entity_t reader = DDS_ENTITY_NIL;

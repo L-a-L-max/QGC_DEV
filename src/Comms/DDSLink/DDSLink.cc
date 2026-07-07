@@ -19,6 +19,23 @@ DDSLink::DDSLink(SharedLinkConfigurationPtr &config, QObject *parent)
     (void) connect(&_pollTimer, &QTimer::timeout, this, &DDSLink::_onPollTimer);
     (void) connect(this, &DDSLink::ddsMessageReceived,
                    &_dataInjector, &DDSDataInjector::onDDSMessage);
+
+    // Watchdog timer: fires every 1s to check if data reception has timed out
+    _timeoutTimer.setInterval(1000);
+    (void) connect(&_timeoutTimer, &QTimer::timeout, this, [this]() {
+        if (!_connected || _lastDataReceivedMs == 0) {
+            return;
+        }
+        const qint64 elapsed = QDateTime::currentMSecsSinceEpoch() - _lastDataReceivedMs;
+        if (elapsed > kDataTimeoutMs && !_timeoutNotified) {
+            _timeoutNotified = true;
+            qWarning() << "[DDSLink] Data reception timeout:" << elapsed
+                       << "ms since last data (threshold:" << kDataTimeoutMs << "ms)";
+            emit communicationError(tr("DDS Link"),
+                tr("No data received for %1 seconds — connection may be lost")
+                    .arg(elapsed / 1000));
+        }
+    });
 }
 
 DDSLink::~DDSLink()
@@ -68,6 +85,11 @@ bool DDSLink::_connect()
     // The bridge connects to the remote Zenoh router and creates a local DDS
     // participant — DDSLink then talks to it over localhost DDS.
     if (config->zenohBridge()) {
+        // Ensure previous bridge instance is fully stopped before restarting
+        if (_zenohBridge.isRunning()) {
+            qInfo() << "[DDSLink] Stopping stale Zenoh bridge before reconnect";
+            _zenohBridge.stop();
+        }
         if (!_zenohBridge.start(config->zenohEndpoint(), config->domainId())) {
             qWarning() << "[DDSLink] Zenoh bridge failed to start:"
                        << _zenohBridge.lastError();
@@ -136,6 +158,9 @@ bool DDSLink::_connect()
     _skydroidJoystick.setEnabled(config->skydroidJoystick());
 
     _pollTimer.start();
+    _lastDataReceivedMs = QDateTime::currentMSecsSinceEpoch();
+    _timeoutNotified = false;
+    _timeoutTimer.start();
 
     _connected = true;
     qInfo() << "[DDSLink] DDS link connected on domain" << config->domainId();
@@ -211,6 +236,7 @@ void DDSLink::disconnect()
     }
 
     _pollTimer.stop();
+    _timeoutTimer.stop();
 
     // Deinit publishers before destroying participant
     _heartbeatPublisher.deinit();
@@ -251,6 +277,7 @@ void DDSLink::_onPollTimer()
     }
 
     const quint64 now = static_cast<quint64>(QDateTime::currentMSecsSinceEpoch()) * 1000;
+    bool gotData = false;
 
     for (auto it = _readers.cbegin(); it != _readers.cend(); ++it) {
         if (it.value().reader <= 0) {
@@ -258,12 +285,21 @@ void DDSLink::_onPollTimer()
         }
         const QHash<QString, QVariant> sample = _readSample(it.value().reader, it.key());
         if (!sample.isEmpty()) {
+            gotData = true;
             if (!_receivedTopics.contains(it.key())) {
                 _receivedTopics.insert(it.key());
                 qInfo() << "[DDSLink] First data received from" << it.key()
                          << "fields:" << sample.size();
             }
             emit ddsMessageReceived(it.key(), sample, now);
+        }
+    }
+
+    if (gotData) {
+        _lastDataReceivedMs = QDateTime::currentMSecsSinceEpoch();
+        if (_timeoutNotified) {
+            _timeoutNotified = false;
+            qInfo() << "[DDSLink] Data reception resumed";
         }
     }
 }
