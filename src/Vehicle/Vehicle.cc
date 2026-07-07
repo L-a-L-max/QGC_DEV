@@ -3090,11 +3090,12 @@ void Vehicle::clearAllParamMapRC(void)
 void Vehicle::sendJoystickDataThreadSafe(float roll, float pitch, float yaw, float thrust, quint16 buttons, quint16 buttons2, float pitchExtension, float rollExtension, float aux1, float aux2, float aux3, float aux4, float aux5, float aux6)
 {
 #ifdef QGC_ENABLE_DDS
-    // Send via DDS when the publisher is ready (independent of MAVLink link state).
-    // Values are already calibrated/curved by the Joystick system, so use
-    // sendManualControlDirect which skips the virtual-joystick curve logic.
+    // Send via DDS when enabled and ready. The ddsUsbJoystickEnabled setting
+    // lets the user release DDS control so lower-priority sources can take over.
     if (_ddsManualControlPublisher && _ddsManualControlPublisher->isReady()) {
-        _ddsManualControlPublisher->sendManualControlDirect(roll, pitch, yaw, thrust);
+        if (SettingsManager::instance()->appSettings()->ddsUsbJoystickEnabled()->rawValue().toBool()) {
+            _ddsManualControlPublisher->sendManualControlDirect(roll, pitch, yaw, thrust);
+        }
     }
 #endif
 

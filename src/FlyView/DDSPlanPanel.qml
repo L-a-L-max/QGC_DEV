@@ -5,6 +5,8 @@ import QtQuick.Dialogs
 
 import QGroundControl
 import QGroundControl.Controls
+import QGroundControl.FactControls
+import QGroundControl.VehicleSetup
 
 Rectangle {
     id:     root
@@ -390,6 +392,34 @@ Rectangle {
             font.bold: true
         }
 
+        // USB Joystick DDS toggle — release control by disabling
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: ScreenTools.defaultFontPixelWidth
+
+            property var _appSettings: QGroundControl.settingsManager.appSettings
+
+            QGCCheckBox {
+                id:      usbJoystickDdsCheck
+                text:    qsTr("USB Joystick → DDS")
+                checked: parent._appSettings.ddsUsbJoystickEnabled.rawValue
+                onClicked: parent._appSettings.ddsUsbJoystickEnabled.rawValue = checked
+            }
+            QGCLabel {
+                text:  usbJoystickDdsCheck.checked ? qsTr("Sending") : qsTr("Released")
+                color: usbJoystickDdsCheck.checked ? qgcPal.colorGreen : qgcPal.colorOrange
+                font.bold: true
+            }
+        }
+
+        // Joystick calibration (works without parameter page)
+        QGCButton {
+            Layout.fillWidth: true
+            text:             qsTr("Joystick Calibration...")
+            enabled:          joystickManager.activeJoystick
+            onClicked:        joystickCalibrationDialog.open()
+        }
+
         GridLayout {
             Layout.fillWidth: true
             columns:          3
@@ -487,6 +517,101 @@ Rectangle {
             if (_missionMgr) {
                 var path = selectedFile.toString().replace("file://", "")
                 _missionMgr.loadMission(path)
+            }
+        }
+    }
+
+    // Joystick calibration dialog — works without the parameter-gated Vehicle Setup page
+    Popup {
+        id:             joystickCalibrationDialog
+        parent:         Overlay.overlay
+        anchors.centerIn: parent
+        width:          Math.min(parent.width * 0.9, ScreenTools.defaultFontPixelWidth * 80)
+        height:         Math.min(parent.height * 0.85, ScreenTools.defaultFontPixelHeight * 45)
+        modal:          true
+        closePolicy:    Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        padding:        ScreenTools.defaultFontPixelHeight
+
+        background: Rectangle {
+            color:  qgcPal.window
+            radius: ScreenTools.defaultFontPixelHeight / 2
+            border.color: qgcPal.groupBorder
+            border.width: 1
+        }
+
+        contentItem: ColumnLayout {
+            spacing: ScreenTools.defaultFontPixelHeight / 2
+
+            RowLayout {
+                Layout.fillWidth: true
+                QGCLabel {
+                    text:               qsTr("Joystick Calibration")
+                    font.pointSize:     ScreenTools.mediumFontPointSize
+                    font.bold:          true
+                    Layout.fillWidth:   true
+                }
+                QGCButton {
+                    text:       qsTr("Close")
+                    onClicked:  joystickCalibrationDialog.close()
+                }
+            }
+
+            Loader {
+                Layout.fillWidth:  true
+                Layout.fillHeight: true
+                active:            joystickCalibrationDialog.opened && joystickManager.activeJoystick
+                sourceComponent:   joystickCalibrationComponent
+            }
+
+            QGCLabel {
+                visible:            !joystickManager.activeJoystick
+                text:               qsTr("No joystick detected. Connect a USB joystick and try again.")
+                Layout.fillWidth:   true
+                wrapMode:           Text.WordWrap
+            }
+        }
+    }
+
+    Component {
+        id: joystickCalibrationComponent
+
+        ColumnLayout {
+            spacing: ScreenTools.defaultFontPixelHeight / 2
+
+            property var _activeJoystick: joystickManager.activeJoystick
+
+            RowLayout {
+                spacing: ScreenTools.defaultFontPixelWidth
+
+                QGCLabel { text: qsTr("Joystick:"); font.bold: true }
+                QGCLabel { text: _activeJoystick ? _activeJoystick.name : "" }
+                Item { Layout.fillWidth: true }
+                QGCLabel {
+                    text: _activeJoystick && _activeJoystick.settings.calibrated.rawValue
+                          ? qsTr("Calibrated")
+                          : qsTr("Needs Calibration")
+                    font.bold: true
+                    color: _activeJoystick && _activeJoystick.settings.calibrated.rawValue
+                           ? qgcPal.colorGreen : qgcPal.colorOrange
+                }
+            }
+
+            RemoteControlCalibration {
+                id: remoteControlCalibration
+                Layout.fillWidth:  true
+                Layout.fillHeight: true
+
+                controller: JoystickConfigController {
+                    joystick:     joystickManager.activeJoystick
+                    statusText:   remoteControlCalibration.statusText
+                    cancelButton: remoteControlCalibration.cancelButton
+                    nextButton:   remoteControlCalibration.nextButton
+                    joystickMode: true
+                }
+
+                useDeadband: controller && controller.joystick && controller.joystick.settings.useDeadband.rawValue
+
+                Component.onCompleted: controller.start()
             }
         }
     }
