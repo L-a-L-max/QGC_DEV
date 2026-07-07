@@ -8,6 +8,7 @@
 #include "QGCCorePlugin.h"
 #include "QGCLoggingCategory.h"
 #include "QmlObjectListModel.h"
+#include "AppSettings.h"
 #include "SettingsManager.h"
 #include "Vehicle.h"
 #include "VehicleSupports.h"
