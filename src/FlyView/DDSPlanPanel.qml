@@ -579,6 +579,7 @@ Rectangle {
             spacing: ScreenTools.defaultFontPixelHeight / 2
 
             property var _activeJoystick: joystickManager.activeJoystick
+            property bool _calibrated: _activeJoystick ? _activeJoystick.settings.calibrated.rawValue : false
 
             RowLayout {
                 spacing: ScreenTools.defaultFontPixelWidth
@@ -586,13 +587,18 @@ Rectangle {
                 QGCLabel { text: qsTr("Joystick:"); font.bold: true }
                 QGCLabel { text: _activeJoystick ? _activeJoystick.name : "" }
                 Item { Layout.fillWidth: true }
+
+                QGCCheckBox {
+                    text:    qsTr("Enable")
+                    checked: joystickManager.activeJoystickEnabledForActiveVehicle
+                    enabled: _calibrated
+                    onClicked: joystickManager.activeJoystickEnabledForActiveVehicle = checked
+                }
+
                 QGCLabel {
-                    text: _activeJoystick && _activeJoystick.settings.calibrated.rawValue
-                          ? qsTr("Calibrated")
-                          : qsTr("Needs Calibration")
+                    text: _calibrated ? qsTr("Calibrated") : qsTr("Needs Calibration")
                     font.bold: true
-                    color: _activeJoystick && _activeJoystick.settings.calibrated.rawValue
-                           ? qgcPal.colorGreen : qgcPal.colorOrange
+                    color: _calibrated ? qgcPal.colorGreen : qgcPal.colorOrange
                 }
             }
 
@@ -612,6 +618,13 @@ Rectangle {
                 useDeadband: controller && controller.joystick && controller.joystick.settings.useDeadband.rawValue
 
                 Component.onCompleted: controller.start()
+
+                Connections {
+                    target: remoteControlCalibration.controller
+                    function onCalibrationCompleted() {
+                        joystickManager.activeJoystickEnabledForActiveVehicle = true
+                    }
+                }
             }
         }
     }
